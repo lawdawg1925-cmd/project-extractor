@@ -1,0 +1,29 @@
+// Verifies "Add to Home Screen"/offline mode: after one visit (service worker caches the app),
+// the app reloads and extracts with the network completely OFF.
+import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import puppeteer from 'puppeteer-core';
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const APP = path.join(ROOT, 'app');
+const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
+const server = http.createServer((q, s) => { const p = path.join(APP, new URL(q.url, 'http://x').pathname.replace(/^\/$/, '/index.html')); if (!fs.existsSync(p) || fs.statSync(p).isDirectory()) { s.writeHead(404); return s.end(); } s.writeHead(200, { 'Content-Type': T[path.extname(p)] || 'application/octet-stream' }); fs.createReadStream(p).pipe(s); }).listen(0);
+const port = server.address().port;
+const browser = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox'] });
+const page = await browser.newPage();
+await page.goto(`http://localhost:${port}/index.html`);
+await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+await new Promise((r) => setTimeout(r, 2500));
+const cached = await page.evaluate(async () => (await (await caches.open('grx-scan-v5')).keys()).length);
+server.close();
+await page.setOfflineMode(true);
+await page.reload({ waitUntil: 'load' });
+await (await page.$('#inFile')).uploadFile(path.join(ROOT, 'samples/cr_clean.png'));
+await page.waitForFunction(() => !document.getElementById('btnExtract').disabled);
+await page.click('#btnExtract');
+const ok = await page.waitForSelector('#step5:not(.hidden)', { timeout: 60000 }).then(() => true).catch(() => false);
+const plate = ok ? await page.$eval('#f_plate_no', (e) => e.value) : null;
+console.log(JSON.stringify({ cachedFiles: cached, offlineExtraction: ok, plate }));
+await browser.close();
+process.exitCode = ok ? 0 : 1;

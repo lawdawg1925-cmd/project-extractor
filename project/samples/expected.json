@@ -1,0 +1,610 @@
+{
+  "license_clean.png": {
+    "type": "license",
+    "kind": "clean",
+    "fields": {
+      "license_no": "D12-34-567890",
+      "full_name": "DELA CRUZ, JUAN SANTOS",
+      "last_name": "DELA CRUZ",
+      "first_name": "JUAN",
+      "middle_name": "SANTOS",
+      "nationality": "PHL",
+      "sex": "M",
+      "date_of_birth": "1990/01/15",
+      "weight": "70",
+      "height": "1.70",
+      "address": "123 MAGSAYSAY AVENUE, BRGY. PENAFRANCIA, NAGA CITY, CAMARINES SUR",
+      "expiration_date": "2031/01/15",
+      "agency_code": "D12",
+      "blood_type": "O+",
+      "eye_color": "BLACK",
+      "conditions": "NONE",
+      "classification": null,
+      "dl_codes": "A, A1, B, B1, B2",
+      "restrictions": null
+    }
+  },
+  "license2_nonpro_clean.png": {
+    "type": "license",
+    "kind": "clean",
+    "fields": {
+      "license_no": "D05-18-004321",
+      "full_name": "SANTOS, MARIA CLARA REYES",
+      "last_name": "SANTOS",
+      "first_name": "MARIA CLARA",
+      "middle_name": "REYES",
+      "nationality": "PHL",
+      "sex": "F",
+      "date_of_birth": "1985/07/22",
+      "weight": "55",
+      "height": "1.58",
+      "address": "45 PANGANIBAN DRIVE, BRGY. TINAGO, NAGA CITY, CAMARINES SUR",
+      "expiration_date": "2028/07/22",
+      "agency_code": "D05",
+      "blood_type": "A+",
+      "eye_color": "BROWN",
+      "conditions": "A - WEAR CORRECTIVE LENSES",
+      "classification": "NON-PROFESSIONAL",
+      "restrictions": "1, 2",
+      "dl_codes": null
+    }
+  },
+  "license_rotated90.jpg": {
+    "type": "license",
+    "kind": "degraded",
+    "fields": {
+      "license_no": "D12-34-567890",
+      "full_name": "DELA CRUZ, JUAN SANTOS",
+      "last_name": "DELA CRUZ",
+      "first_name": "JUAN",
+      "middle_name": "SANTOS",
+      "nationality": "PHL",
+      "sex": "M",
+      "date_of_birth": "1990/01/15",
+      "weight": "70",
+      "height": "1.70",
+      "address": "123 MAGSAYSAY AVENUE, BRGY. PENAFRANCIA, NAGA CITY, CAMARINES SUR",
+      "expiration_date": "2031/01/15",
+      "agency_code": "D12",
+      "blood_type": "O+",
+      "eye_color": "BLACK",
+      "conditions": "NONE",
+      "classification": null,
+      "dl_codes": "A, A1, B, B1, B2",
+      "restrictions": null
+    }
+  },
+  "license_photo_skew.jpg": {
+    "type": "license",
+    "kind": "degraded",
+    "fields": {
+      "license_no": "D12-34-567890",
+      "full_name": "DELA CRUZ, JUAN SANTOS",
+      "last_name": "DELA CRUZ",
+      "first_name": "JUAN",
+      "middle_name": "SANTOS",
+      "nationality": "PHL",
+      "sex": "M",
+      "date_of_birth": "1990/01/15",
+      "weight": "70",
+      "height": "1.70",
+      "address": "123 MAGSAYSAY AVENUE, BRGY. PENAFRANCIA, NAGA CITY, CAMARINES SUR",
+      "expiration_date": "2031/01/15",
+      "agency_code": "D12",
+      "blood_type": "O+",
+      "eye_color": "BLACK",
+      "conditions": "NONE",
+      "classification": null,
+      "dl_codes": "A, A1, B, B1, B2",
+      "restrictions": null
+    }
+  },
+  "license_blurry_lowcontrast.jpg": {
+    "type": "license",
+    "kind": "degraded",
+    "fields": {
+      "license_no": "D05-18-004321",
+      "full_name": "SANTOS, MARIA CLARA REYES",
+      "last_name": "SANTOS",
+      "first_name": "MARIA CLARA",
+      "middle_name": "REYES",
+      "nationality": "PHL",
+      "sex": "F",
+      "date_of_birth": "1985/07/22",
+      "weight": "55",
+      "height": "1.58",
+      "address": "45 PANGANIBAN DRIVE, BRGY. TINAGO, NAGA CITY, CAMARINES SUR",
+      "expiration_date": "2028/07/22",
+      "agency_code": "D05",
+      "blood_type": "A+",
+      "eye_color": "BROWN",
+      "conditions": "A - WEAR CORRECTIVE LENSES",
+      "classification": "NON-PROFESSIONAL",
+      "restrictions": "1, 2",
+      "dl_codes": null
+    }
+  },
+  "cr_clean.png": {
+    "type": "cr",
+    "kind": "clean",
+    "fields": {
+      "cr_no": "123456789",
+      "date_registered": "2024/03/12",
+      "mv_file_no": "0517-00000123456",
+      "plate_no": "NBC 1234",
+      "engine_no": "2NRX123456",
+      "chassis_no": "MR2B29F30K1234567",
+      "vin": null,
+      "vehicle_type": "CAR",
+      "piston_displacement": "1496",
+      "cylinders": "4",
+      "fuel": "GAS",
+      "make": "TOYOTA",
+      "series": "VIOS 1.5 G CVT",
+      "body_type": "SEDAN",
+      "year_model": "2024",
+      "gross_wt": "1500",
+      "net_wt": "1060",
+      "net_capacity": "5 PERSONS",
+      "color": "WHITE",
+      "classification": "PRIVATE",
+      "owner_name": "DELA CRUZ, JUAN SANTOS",
+      "owner_address": "123 MAGSAYSAY AVENUE, NAGA CITY, CAMARINES SUR"
+    }
+  },
+  "cr2_motorcycle_clean.png": {
+    "type": "cr",
+    "kind": "clean",
+    "fields": {
+      "cr_no": "987654321",
+      "date_registered": "2023/11/05",
+      "mv_file_no": "0507-00000987654",
+      "plate_no": "456 KJX",
+      "engine_no": "JK12E7654321",
+      "chassis_no": "MH1JK1234PK765432",
+      "vin": null,
+      "vehicle_type": "MC",
+      "piston_displacement": "125",
+      "cylinders": "1",
+      "fuel": "GAS",
+      "make": "HONDA",
+      "series": "CLICK 125I",
+      "body_type": "SCOOTER",
+      "year_model": "2023",
+      "gross_wt": "200",
+      "net_wt": "112",
+      "net_capacity": "2 PERSONS",
+      "color": "RED/BLACK",
+      "classification": "PRIVATE",
+      "owner_name": "REYES, PEDRO GOMEZ",
+      "owner_address": "78 ELIAS ANGELES ST., NAGA CITY, CAMARINES SUR"
+    }
+  },
+  "cr_photo_skew.jpg": {
+    "type": "cr",
+    "kind": "degraded",
+    "fields": {
+      "cr_no": "123456789",
+      "date_registered": "2024/03/12",
+      "mv_file_no": "0517-00000123456",
+      "plate_no": "NBC 1234",
+      "engine_no": "2NRX123456",
+      "chassis_no": "MR2B29F30K1234567",
+      "vin": null,
+      "vehicle_type": "CAR",
+      "piston_displacement": "1496",
+      "cylinders": "4",
+      "fuel": "GAS",
+      "make": "TOYOTA",
+      "series": "VIOS 1.5 G CVT",
+      "body_type": "SEDAN",
+      "year_model": "2024",
+      "gross_wt": "1500",
+      "net_wt": "1060",
+      "net_capacity": "5 PERSONS",
+      "color": "WHITE",
+      "classification": "PRIVATE",
+      "owner_name": "DELA CRUZ, JUAN SANTOS",
+      "owner_address": "123 MAGSAYSAY AVENUE, NAGA CITY, CAMARINES SUR"
+    }
+  },
+  "cr_cropped_missing_owner.jpg": {
+    "type": "cr",
+    "kind": "degraded",
+    "fields": {
+      "cr_no": "123456789",
+      "date_registered": "2024/03/12",
+      "mv_file_no": "0517-00000123456",
+      "plate_no": "NBC 1234",
+      "engine_no": "2NRX123456",
+      "chassis_no": "MR2B29F30K1234567",
+      "vin": null,
+      "vehicle_type": "CAR",
+      "piston_displacement": "1496",
+      "cylinders": "4",
+      "fuel": "GAS",
+      "make": "TOYOTA",
+      "series": "VIOS 1.5 G CVT",
+      "body_type": "SEDAN",
+      "year_model": "2024",
+      "gross_wt": "1500",
+      "net_wt": "1060",
+      "net_capacity": "5 PERSONS",
+      "color": "WHITE",
+      "classification": "PRIVATE",
+      "owner_name": null,
+      "owner_address": null
+    }
+  },
+  "cr_rotated180_blurry.jpg": {
+    "type": "cr",
+    "kind": "degraded",
+    "fields": {
+      "cr_no": "987654321",
+      "date_registered": "2023/11/05",
+      "mv_file_no": "0507-00000987654",
+      "plate_no": "456 KJX",
+      "engine_no": "JK12E7654321",
+      "chassis_no": "MH1JK1234PK765432",
+      "vin": null,
+      "vehicle_type": "MC",
+      "piston_displacement": "125",
+      "cylinders": "1",
+      "fuel": "GAS",
+      "make": "HONDA",
+      "series": "CLICK 125I",
+      "body_type": "SCOOTER",
+      "year_model": "2023",
+      "gross_wt": "200",
+      "net_wt": "112",
+      "net_capacity": "2 PERSONS",
+      "color": "RED/BLACK",
+      "classification": "PRIVATE",
+      "owner_name": "REYES, PEDRO GOMEZ",
+      "owner_address": "78 ELIAS ANGELES ST., NAGA CITY, CAMARINES SUR"
+    }
+  },
+  "license_ltonew_flat.png": {
+    "type": "license",
+    "kind": "hard-layout",
+    "fields": {
+      "license_no": "E07-15-123987",
+      "full_name": "MERCADO, LUIS ANDRES",
+      "last_name": "MERCADO",
+      "first_name": "LUIS",
+      "middle_name": "ANDRES",
+      "nationality": "PHL",
+      "sex": "M",
+      "date_of_birth": "1983/04/17",
+      "weight": "78",
+      "height": "1.64",
+      "address": "1520 MAGSAYSAY AVE. CONCEPCION GRANDE NAGA CITY",
+      "expiration_date": "2033/04/17",
+      "agency_code": "E07",
+      "blood_type": "O+",
+      "eye_color": "BLACK",
+      "conditions": "NONE",
+      "classification": null,
+      "dl_codes": "A, A1, B, B1, B2",
+      "restrictions": null
+    }
+  },
+  "license_ltonew_handheld_tilt.jpg": {
+    "type": "license",
+    "kind": "hard",
+    "fields": {
+      "license_no": "E07-15-123987",
+      "full_name": "MERCADO, LUIS ANDRES",
+      "last_name": "MERCADO",
+      "first_name": "LUIS",
+      "middle_name": "ANDRES",
+      "nationality": "PHL",
+      "sex": "M",
+      "date_of_birth": "1983/04/17",
+      "weight": "78",
+      "height": "1.64",
+      "address": "1520 MAGSAYSAY AVE. CONCEPCION GRANDE NAGA CITY",
+      "expiration_date": "2033/04/17",
+      "agency_code": "E07",
+      "blood_type": "O+",
+      "eye_color": "BLACK",
+      "conditions": "NONE",
+      "classification": null,
+      "dl_codes": "A, A1, B, B1, B2",
+      "restrictions": null
+    },
+    "corners": [
+      [
+        470,
+        470
+      ],
+      [
+        1890,
+        330
+      ],
+      [
+        1990,
+        1250
+      ],
+      [
+        520,
+        1420
+      ]
+    ]
+  },
+  "license10_clean.png": {
+    "type": "license",
+    "kind": "hard-layout",
+    "fields": {
+      "license_no": "E05-21-002468",
+      "full_name": "RAMOS, ELMER BAUTISTA",
+      "last_name": "RAMOS",
+      "first_name": "ELMER",
+      "middle_name": "BAUTISTA",
+      "nationality": "PHL",
+      "sex": "M",
+      "date_of_birth": "1995/03/08",
+      "weight": "68",
+      "height": "1.68",
+      "address": "ZONE 3, BRGY. CAROLINA, NAGA CITY, CAMARINES SUR",
+      "expiration_date": "2034/03/08",
+      "agency_code": "E05",
+      "blood_type": "AB+",
+      "eye_color": "BLACK",
+      "conditions": "NONE",
+      "classification": null,
+      "dl_codes": "A, B, B1",
+      "restrictions": null
+    }
+  },
+  "cr_old_layout_clean.png": {
+    "type": "cr",
+    "kind": "hard-layout",
+    "fields": {
+      "cr_no": "04512398",
+      "date_registered": "1999/06/18",
+      "mv_file_no": "0507-00000234567",
+      "plate_no": "WKD 582",
+      "engine_no": "4G15P123456",
+      "chassis_no": "CK2A-0012345",
+      "vin": null,
+      "vehicle_type": "CAR",
+      "piston_displacement": "1468",
+      "cylinders": "4",
+      "fuel": "GAS",
+      "make": "MITSUBISHI",
+      "series": "LANCER GLX",
+      "body_type": "SEDAN",
+      "year_model": "1998",
+      "gross_wt": "1360",
+      "net_wt": "975",
+      "net_capacity": "5 PERSONS",
+      "color": "BLUE",
+      "classification": "PRIVATE",
+      "owner_name": "LOPEZ, RAMON SANTOS",
+      "owner_address": "21 BAGUMBAYAN SUR, NAGA CITY"
+    }
+  },
+  "license10_perspective_wood.jpg": {
+    "type": "license",
+    "kind": "hard",
+    "fields": {
+      "license_no": "E05-21-002468",
+      "full_name": "RAMOS, ELMER BAUTISTA",
+      "last_name": "RAMOS",
+      "first_name": "ELMER",
+      "middle_name": "BAUTISTA",
+      "nationality": "PHL",
+      "sex": "M",
+      "date_of_birth": "1995/03/08",
+      "weight": "68",
+      "height": "1.68",
+      "address": "ZONE 3, BRGY. CAROLINA, NAGA CITY, CAMARINES SUR",
+      "expiration_date": "2034/03/08",
+      "agency_code": "E05",
+      "blood_type": "AB+",
+      "eye_color": "BLACK",
+      "conditions": "NONE",
+      "classification": null,
+      "dl_codes": "A, B, B1",
+      "restrictions": null
+    },
+    "corners": [
+      [
+        520,
+        380
+      ],
+      [
+        1880,
+        300
+      ],
+      [
+        1960,
+        1240
+      ],
+      [
+        430,
+        1330
+      ]
+    ]
+  },
+  "license_perspective_glare_clutter.jpg": {
+    "type": "license",
+    "kind": "hard",
+    "fields": {
+      "license_no": "D12-34-567890",
+      "full_name": "DELA CRUZ, JUAN SANTOS",
+      "last_name": "DELA CRUZ",
+      "first_name": "JUAN",
+      "middle_name": "SANTOS",
+      "nationality": "PHL",
+      "sex": "M",
+      "date_of_birth": "1990/01/15",
+      "weight": "70",
+      "height": "1.70",
+      "address": "123 MAGSAYSAY AVENUE, BRGY. PENAFRANCIA, NAGA CITY, CAMARINES SUR",
+      "expiration_date": "2031/01/15",
+      "agency_code": "D12",
+      "blood_type": "O+",
+      "eye_color": "BLACK",
+      "conditions": "NONE",
+      "classification": null,
+      "dl_codes": "A, A1, B, B1, B2",
+      "restrictions": null
+    },
+    "corners": [
+      [
+        600,
+        420
+      ],
+      [
+        1820,
+        520
+      ],
+      [
+        1760,
+        1380
+      ],
+      [
+        480,
+        1290
+      ]
+    ]
+  },
+  "license10_lowlight_motion.jpg": {
+    "type": "license",
+    "kind": "hard",
+    "fields": {
+      "license_no": "E05-21-002468",
+      "full_name": "RAMOS, ELMER BAUTISTA",
+      "last_name": "RAMOS",
+      "first_name": "ELMER",
+      "middle_name": "BAUTISTA",
+      "nationality": "PHL",
+      "sex": "M",
+      "date_of_birth": "1995/03/08",
+      "weight": "68",
+      "height": "1.68",
+      "address": "ZONE 3, BRGY. CAROLINA, NAGA CITY, CAMARINES SUR",
+      "expiration_date": "2034/03/08",
+      "agency_code": "E05",
+      "blood_type": "AB+",
+      "eye_color": "BLACK",
+      "conditions": "NONE",
+      "classification": null,
+      "dl_codes": "A, B, B1",
+      "restrictions": null
+    },
+    "corners": [
+      [
+        380,
+        330
+      ],
+      [
+        2010,
+        360
+      ],
+      [
+        2050,
+        1400
+      ],
+      [
+        330,
+        1380
+      ]
+    ],
+    "cornersKnownHard": "dark header band blends into the dark table in low light"
+  },
+  "cr_perspective_wood_glare.jpg": {
+    "type": "cr",
+    "kind": "hard",
+    "fields": {
+      "cr_no": "123456789",
+      "date_registered": "2024/03/12",
+      "mv_file_no": "0517-00000123456",
+      "plate_no": "NBC 1234",
+      "engine_no": "2NRX123456",
+      "chassis_no": "MR2B29F30K1234567",
+      "vin": null,
+      "vehicle_type": "CAR",
+      "piston_displacement": "1496",
+      "cylinders": "4",
+      "fuel": "GAS",
+      "make": "TOYOTA",
+      "series": "VIOS 1.5 G CVT",
+      "body_type": "SEDAN",
+      "year_model": "2024",
+      "gross_wt": "1500",
+      "net_wt": "1060",
+      "net_capacity": "5 PERSONS",
+      "color": "WHITE",
+      "classification": "PRIVATE",
+      "owner_name": "DELA CRUZ, JUAN SANTOS",
+      "owner_address": "123 MAGSAYSAY AVENUE, NAGA CITY, CAMARINES SUR"
+    },
+    "corners": [
+      [
+        250,
+        230
+      ],
+      [
+        2170,
+        170
+      ],
+      [
+        2240,
+        1600
+      ],
+      [
+        160,
+        1660
+      ]
+    ]
+  },
+  "cr_old_perspective_clutter_lowlight.jpg": {
+    "type": "cr",
+    "kind": "hard",
+    "fields": {
+      "cr_no": "04512398",
+      "date_registered": "1999/06/18",
+      "mv_file_no": "0507-00000234567",
+      "plate_no": "WKD 582",
+      "engine_no": "4G15P123456",
+      "chassis_no": "CK2A-0012345",
+      "vin": null,
+      "vehicle_type": "CAR",
+      "piston_displacement": "1468",
+      "cylinders": "4",
+      "fuel": "GAS",
+      "make": "MITSUBISHI",
+      "series": "LANCER GLX",
+      "body_type": "SEDAN",
+      "year_model": "1998",
+      "gross_wt": "1360",
+      "net_wt": "975",
+      "net_capacity": "5 PERSONS",
+      "color": "BLUE",
+      "classification": "PRIVATE",
+      "owner_name": "LOPEZ, RAMON SANTOS",
+      "owner_address": "21 BAGUMBAYAN SUR, NAGA CITY"
+    },
+    "corners": [
+      [
+        300,
+        260
+      ],
+      [
+        2080,
+        330
+      ],
+      [
+        2120,
+        1640
+      ],
+      [
+        240,
+        1580
+      ]
+    ]
+  }
+}

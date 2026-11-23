@@ -1,0 +1,23 @@
+{
+  "name": "project-extractor",
+  "version": "1.0.0",
+  "description": "License & CR data extraction and encoding assistant (prototype)",
+  "scripts": {
+    "test": "node tests/unit-tests.mjs && node tests/quad-tests.mjs && node tests/run-tests.mjs",
+    "test:browser": "node tests/smoke-browser.mjs && node tests/offline-test.mjs && node tests/filetest.mjs",
+    "samples": "python3 samples/generate_samples.py && python3 samples/generate_samples_hard.py",
+    "serve": "python3 -m http.server 8765 --directory app"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@tesseract.js-data/eng": "^1.0.0",
+    "tesseract.js": "^5.1.1"
+  },
+  "devDependencies": {
+    "jimp": "^1.7.0",
+    "puppeteer-core": "^25.18.1"
+  }
+}

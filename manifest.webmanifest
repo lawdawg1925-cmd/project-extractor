@@ -1,0 +1,14 @@
+{
+  "name": "GRX Scan — License & CR Data Extractor",
+  "short_name": "GRX Scan",
+  "description": "Traffic Law Enforcement Unit, Naga City Police Office. Extract License and CR data on this device for faster, accurate encoding.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#eef2f7",
+  "theme_color": "#0b2a5b",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

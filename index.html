@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GRX Scan — License &amp; CR | TLEU, Naga City Police Office</title>
+<meta name="theme-color" content="#0b2a5b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="GRX Scan">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/style.css">
+<!-- Content-Security-Policy: no network connections to other sites are allowed. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' blob: data:; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' blob:; worker-src 'self' blob:; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; connect-src 'self' blob: data:">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <img class="logo-img" src="icons/ncpo-logo.png" alt="Naga City Police Office logo" width="46" height="56">
+    <div><div class="unit">Traffic Law Enforcement Unit · Naga City Police Office</div><h1>GRX Scan</h1><p>License &amp; CR Data Extractor · Encoding Assistant</p></div>
+  </div>
+  <button id="btnClearTop" class="btn ghost danger" type="button" title="Delete the image and all extracted data from this device">🗑 Clear / Delete</button>
+</header>
+
+<main>
+  <!-- STEP 1 -->
+  <section class="card" id="step1">
+    <h2><span class="num">1</span> Take or upload a photo</h2>
+    <div class="row big-buttons">
+      <label class="btn primary xl" for="inCamera">📷 Take Photo
+        <input id="inCamera" type="file" accept="image/*" capture="environment" hidden>
+      </label>
+      <label class="btn xl" for="inFile">🖼 Choose Image
+        <input id="inFile" type="file" accept="image/*" hidden>
+      </label>
+    </div>
+    <p class="hint" id="dropHint">Tip: place the document flat on a dark surface, good light, no glare, fill the frame. You can also drag &amp; drop an image here.</p>
+    <div id="previewWrap" class="preview hidden">
+      <div class="canvas-box"><canvas id="preview"></canvas><svg id="quadSvg" class="quad-svg hidden"><polygon id="quadPoly"></polygon></svg><div id="cropBox" class="crop-box hidden"></div></div>
+      <label class="check" id="straightenRow"><input type="checkbox" id="chkStraighten" checked> Auto-straighten document <span class="hint" id="quadStatus"></span></label>
+      <div class="row tools">
+        <button class="btn" id="btnRotL" type="button">⟲ Rotate</button>
+        <button class="btn" id="btnRotR" type="button">⟳ Rotate</button>
+        <button class="btn" id="btnCrop" type="button">✂ Crop</button>
+        <button class="btn hidden" id="btnCropApply" type="button">✔ Apply crop</button>
+        <button class="btn hidden" id="btnCropReset" type="button">↺ Undo crop</button>
+      </div>
+      <p class="hint" id="quadHint">The yellow outline marks the document edges. If it is off, drag the round corner handles onto the card corners (optional).</p>
+      <p class="hint" id="cropHint" hidden>Drag a box around the document, then tap “Apply crop”.</p>
+    </div>
+  </section>
+
+  <!-- STEP 2 + 3 -->
+  <section class="card" id="step2">
+    <h2><span class="num">2</span> Document type</h2>
+    <div class="seg" role="radiogroup" aria-label="Document type">
+      <label><input type="radio" name="doctype" value="auto" checked><span>Auto-detect</span></label>
+      <label><input type="radio" name="doctype" value="license"><span>Driver's License</span></label>
+      <label><input type="radio" name="doctype" value="cr"><span>CR (Cert. of Registration)</span></label>
+    </div>
+    <h2 class="mt"><span class="num">3</span> Extract</h2>
+    <button class="btn primary xl wide" id="btnExtract" type="button" disabled>🔍 EXTRACT DATA</button>
+    <div id="progress" class="progress hidden"><div class="bar"><div id="progBar"></div></div><p id="progText">Starting…</p></div>
+  </section>
+
+  <!-- STEP 4 -->
+  <section class="card hidden" id="step4">
+    <h2><span class="num">4</span> Review &amp; correct</h2>
+    <p class="doc-type" id="docType"></p>
+    <ul id="messages" class="messages"></ul>
+    <div class="legend">
+      <span class="chip ok">OK</span><span class="chip verify">VERIFY</span><span class="chip unreadable">NOT READABLE</span><span class="chip notfound">NOT FOUND</span><span class="chip edited">EDITED</span>
+      <span class="legend-txt">Tap a field to correct it. Always compare with the document.</span>
+    </div>
+    <form id="fieldsForm" autocomplete="off"></form>
+    <details class="raw" id="straightWrap" hidden><summary>Show the straightened image that was read</summary><canvas id="straightPreview" class="straight-preview"></canvas></details>
+    <details class="raw"><summary>Show raw OCR text (for reference)</summary><pre id="rawText"></pre></details>
+  </section>
+
+  <!-- STEP 5 -->
+  <section class="card hidden" id="step5">
+    <h2><span class="num">5</span> Copy / Export</h2>
+    <textarea id="outText" readonly rows="14" spellcheck="false"></textarea>
+    <div class="row">
+      <button class="btn primary xl" id="btnCopyAll" type="button">📋 Copy All</button>
+      <button class="btn" id="btnTxt" type="button">⬇ .TXT</button>
+      <button class="btn" id="btnCsv" type="button">⬇ .CSV</button>
+      <button class="btn" id="btnJson" type="button">⬇ .JSON</button>
+    </div>
+    <label class="check"><input type="checkbox" id="chkExtra" checked> Include additional details</label>
+    <div class="row mt"><button class="btn danger xl wide" id="btnClear" type="button">🗑 Done — Clear / Delete image &amp; data</button></div>
+  </section>
+</main>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<footer>
+  <div class="foot-unit"><img src="icons/ncpo-logo.png" alt="" width="26" height="32"> <b>Traffic Law Enforcement Unit</b> · Naga City Police Office · PRO5, Philippine National Police</div>
+  🔒 <b>Processed on this device only.</b> The photo is never uploaded or saved; text recognition runs inside this browser.
+  Data stays in memory until you press <b>Clear / Delete</b> or close the page.
+  Encoding-assistance prototype for PNP use — always verify against the original document.
+</footer>
+
+<script src="js/file-warning.js"></script>
+<script src="vendor/tesseract/tesseract.min.js"></script>
+<script type="module" src="js/app.js"></script>
+<noscript>This tool needs JavaScript.</noscript>
+</body>
+</html>

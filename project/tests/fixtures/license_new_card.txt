@@ -1,0 +1,16 @@
+REPUBLIC OF THE PHILIPPINES
+DEPARTMENT OF TRANSPORTATION
+LAND TRANSPORTATION OFFICE
+DRIVER'S LICENSE
+                  Last Name, First Name, Middle Name
+                  GARCIA, PEDRO MANALO
+                  Nationality  Sex  Date of Birth   Weight (kg)  Height(m)
+                  PHL          M    1979/05/30      78           1.75
+                  Address
+                  BLK 4 LOT 9 SAN FELIPE, NAGA CITY, CAMARINES SUR
+                  License No.      Expiration Date   Agency Code
+                  E12-79-001234    2029/05/30        E12
+                  Blood Type   Eyes Color   DL Codes
+                  B+           BLACK        A, B, B1, B2
+                  Conditions
+                  NONE
