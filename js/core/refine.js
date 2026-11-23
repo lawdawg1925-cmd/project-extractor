@@ -94,7 +94,43 @@ async function readRegion(img, r, def, recognize) {
   return reads;
 }
 
-export async function refineFields(fields, defs, img, recognize, { maxFields = 8 } = {}) {
+/** A ruled box first read as blank: re-read the part of the box under/right of its label. */
+async function refineBlank(f, def, img, recognize, cells) {
+  const g = f._geo, c = cells.find((x) => x.id === g.cell);
+  if (!c || !g.label) return false;
+  const lh = g.label.y1 - g.label.y0;
+  const x0 = Math.max(c.x0 + 4, g.label.x0 - lh), x1 = Math.min(c.x1 - 4, g.nextLabelX === Infinity ? c.x1 : g.nextLabelX - lh * 0.3);
+  const y0 = Math.max(c.y0 + 2, (g.label.y0 + g.label.y1) / 2 + lh * 0.3), y1 = c.y1 - 3;
+  if (x1 - x0 < 10 || y1 - y0 < 12) return false;
+  const reads = await readRegion(img, { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }, def, recognize);
+  if (globalThis.GRX_DEBUG_REFINE) console.log('refine-blank', f.key, reads.map((x) => `${x.name}:${x.text}(${Math.round(x.conf)})${x.fmt.ok ? '' : '✗'}`).join(' '));
+  const good = reads.filter((x) => x.fmt.ok && !x.fmt.fixed && x.conf >= 60);
+  if (!good.length) return false;
+  good.sort((a, b) => b.conf - a.conf);
+  const top = good[0];
+  if (good.filter((x) => x.fmt.value === top.fmt.value).length < 2) return false;
+  f.value = top.fmt.value; f.status = STATUS.VERIFY; f.confidence = Math.round(top.conf);
+  f.note = 'The box first looked blank; a close re-read of the box found this value — check it.';
+  return true;
+}
+
+const sameSerial = (a, b) => String(a).replace(/[^A-Za-z0-9]/g, '').toUpperCase() === String(b).replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+
+/** b with characters dropped (a re-read that lost a digit: "40" for "480") */
+function isSubsequence(a, b) {
+  a = String(a).replace(/[^A-Za-z0-9]/g, ''); b = String(b).replace(/[^A-Za-z0-9]/g, '');
+  if (a.length >= b.length) return false;
+  let i = 0; for (const ch of b) if (ch === a[i]) i++;
+  return i === a.length;
+}
+
+export async function refineFields(fields, defs, img, recognize, { maxFields = 8, cells = null } = {}) {
+  let changedBlank = 0;
+  if (cells) for (const f of fields) {
+    const d = defs.find((x) => x.key === f.key);
+    if (d && d.refine && d.refine.blank && f._geo && f._geo.cell !== undefined && f.status === STATUS.NOT_FOUND && /^Blank/.test(f.note || '') && !f.hidden)
+      if (await refineBlank(f, d, img, recognize, cells)) changedBlank++;
+  }
   const todo = fields.filter((f) => {
     const d = defs.find((x) => x.key === f.key);
     return d && d.refine && f._geo && (f.status === STATUS.VERIFY || f.status === STATUS.UNREADABLE) && !/differs|conflict/i.test(f.note || '');
@@ -119,9 +155,17 @@ export async function refineFields(fields, defs, img, recognize, { maxFields = 8
     const top = good[0];
     const agree = good.filter((x) => x.fmt.value === top.fmt.value && !x.fmt.fixed);
     const before = f.value;
-    if (agree.length >= 2 && Math.min(...agree.map((x) => x.conf)) >= 85 && !top.fmt.fixed) {
+    // free-format serials (engine/chassis): a re-read that changes the value is never trusted as OK
+    const strictChange = def.okConf && before && !sameSerial(before, top.fmt.value);
+    if (!strictChange && agree.length >= 2 && Math.min(...agree.map((x) => x.conf)) >= (def.refine.okConf || 85) && !top.fmt.fixed) {
       f.value = top.fmt.value; f.status = STATUS.OK; f.confidence = Math.round(Math.min(...agree.map((x) => x.conf)));
       f.note = `Confirmed by a targeted re-read (${agree.length} image variants agree).`;
+    } else if (def.refine.keep && before && def.format(before).ok && top.fmt.value !== before &&
+      ((f.confidence ?? 0) >= 60 || isSubsequence(top.fmt.value, before) ||
+       (def.okConf && String(before).replace(/[^A-Za-z0-9]/g, '').length === String(top.fmt.value).replace(/[^A-Za-z0-9]/g, '').length))) {
+      // no agreement: keep the first reading (it passed its format check), mention the re-read
+      f.status = STATUS.VERIFY; f.note = [f.note, `A close re-read gave "${top.fmt.value}" — check it.`].filter(Boolean).join(' ');
+      continue;
     } else {
       f.value = top.fmt.value; f.status = STATUS.VERIFY; f.confidence = Math.round(top.conf);
       f.note = `Re-read from the value area${before && before !== top.fmt.value ? ` (first read: "${before}")` : ''} — check it.`;
@@ -129,5 +173,39 @@ export async function refineFields(fields, defs, img, recognize, { maxFields = 8
     if (top.fmt.iso) f.iso = top.fmt.iso;
     if (f.value !== before || f.status === STATUS.OK) changed++;
   }
-  return changed;
+  return changed + changedBlank;
+}
+
+/**
+ * Old-layout CR No.: "CR" and "No." are stacked on two lines left of a large red serial, so the
+ * two-word label is often not found. Re-read the area right of the lone "CR" word (up to "DATE").
+ * Needs two agreeing reads; the result is always VERIFY.
+ */
+export async function refineCrNo(fields, defs, img, ocr, recognize) {
+  const f = fields.find((x) => x.key === 'cr_no'), def = defs.find((d) => d.key === 'cr_no');
+  if (!f || !def || f.status !== STATUS.NOT_FOUND || !ocr || !ocr.words) return false;
+  const words = ocr.words.map((w) => ({ t: String(w.text || '').replace(/[^A-Za-z]/g, '').toUpperCase(), b: w.obox || w.bbox }));
+  const crs = words.filter((w) => w.t === 'CR' && w.b.y0 < img.height * 0.45);
+  for (const cr of crs) {
+    // the "CR" box may already span the stacked "No." below it: use a line height from its width
+    const h = Math.min(cr.b.y1 - cr.b.y0, (cr.b.x1 - cr.b.x0) * 1.1);
+    const date = words.find((w) => /^DATE/.test(w.t) && w.b.x0 > cr.b.x1 && Math.abs(w.b.y0 - cr.b.y0) < h * 2.5);
+    const x0 = cr.b.x1 + h * 0.2, x1 = Math.min(img.width, date ? date.b.x0 - h * 0.3 : cr.b.x1 + h * 14);
+    const y0 = cr.b.y0 - h * 0.4, y1 = Math.max(cr.b.y1, cr.b.y0 + h * 2) + h * 0.4;
+    if (x1 - x0 < h * 3) continue;
+    const reads = await readRegion(img, { x: Math.round(x0), y: Math.round(y0), w: Math.round(x1 - x0), h: Math.round(y1 - y0) }, def, recognize);
+    const good = reads.filter((x) => x.fmt.ok && !x.fmt.fixed && x.conf >= 50).sort((a, b) => b.conf - a.conf);
+    if (!good.length) continue;
+    const top = good[0], agree = good.filter((x) => x.fmt.value === top.fmt.value).length >= 2;
+    // one clear read (>= 85) whose other reads differ from it by at most one digit
+    const near = (a, b) => a.length === b.length && [...a].filter((ch, i) => ch !== b[i]).length <= 1;
+    const others = reads.filter((x) => x !== top && x.fmt.ok).map((x) => x.fmt.value);
+    const clear = top.conf >= 85 && others.length >= 1 && others.every((v) => near(v, top.fmt.value));
+    if (!agree && !clear) continue;
+    const alt = [...new Set(others.filter((v) => v !== top.fmt.value))];
+    Object.assign(f, { value: top.fmt.value, raw: top.text, status: STATUS.VERIFY, confidence: Math.round(top.conf),
+      note: 'Read next to the "CR No." mark at the top' + (alt.length ? ` (also read as ${alt.map((v) => `"${v}"`).join(', ')})` : '') + ' — check it.' });
+    return true;
+  }
+  return false;
 }

@@ -1,0 +1,45 @@
+LTO Form No.3 (Revised December 2020)
+REPUBLIC OF THE PHILIPPINES
+DEPARTMENT OF TRANSPORTATION
+LAND TRANSPORTATION OFFICE
+Field Office  SAN PABLO DISTRICT OFFICE
+Office Code  0412
+Date  06/30/2023
+CERTIFICATE OF REGISTRATION
++--------------------------------------------------------------------------------------------+
+| PLATE NO.            | NGINF NO.            | CHASSIS NO.            | VIN                  |
+| NBC 4321             | 2NR7654321           | PA1BB3HE0P1234567      | N/A                  |
++--------------------------------------------------------------------------------------------+
+| MV FILE NO.          | VEHICLE TYPE         | VEHICLE CATEGORY       | MAKE/BRAND           |
+| 041200000765432      | CAR                  | M1                     | TOYOTA               |
++--------------------------------------------------------------------------------------------+
+| PASSENGER CAPACITY   | COLOR                | TYPE OF FUEL           | CLASSIFICATION       |
+| 5                    | PEARL WHITE          | GASOLINE               | PRIVATE              |
++--------------------------------------------------------------------------------------------+
+| BODY TYPE            | SERIES               | GROSS WEIGHT           | NET WEIGHT           |
+| SEDAN                | VIOS 1.3 XLE         | 1550                   | 1075                 |
++--------------------------------------------------------------------------------------------+
+| YEAR MODEL           | YEAR REBUILT         | PISTON DISPLACEMENT    | MAX POWER (kW)       |
+| 2023                 | N/A                  | 1329                   | N/A                  |
++--------------------------------------------------------------------------------------------+
+| COMPLETE OWNER'S NAME                                                                      |
+| DELA CRUZ, ROSA M.                                                                         |
++--------------------------------------------------------------------------------------------+
+| COMPLETE ADDRESS                                                                           |
+| 12 RIZAL AVE., POBLACION, SAN PABLO CITY, LAGUNA                                           |
++--------------------------------------------------------------------------------------------+
+| ENCUMBERED TO                                                                              |
+| N/A                                                                                        |
++--------------------------------------------------------------------------------------------+
+| DETAILS OF FIRST REGISTRATION | O.R. NO.             | O.R. DATE          | AMOUNT           |
+|                               | 000000301234567      | 06/30/2023         | PHP 3,210.50     |
++--------------------------------------------------------------------------------------------+
+| REMARKS                                                                                    |
+|                                                                                            |
++--------------------------------------------------------------------------------------------+
+This is certifying that the motor vehicle described herein is duly registered. This certificate is VALID only
+when signed by authorized LTO Officials, properly sealed and accompanied by Official Receipt.
+REGISTRANT'S SIGNATURE        BY:        ANA R. LOPEZ
+                                         CHIEF OF OFFICE
+                                         Signature/Date
+CR No.  0012345678

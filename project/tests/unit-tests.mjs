@@ -7,7 +7,8 @@ import cr from '../app/js/extractors/cr.js';
 import * as registry from '../app/js/extractors/registry.js';
 import * as F from '../app/js/core/formats.js';
 import { fromPlainText } from '../app/js/core/layout.js';
-import { toText, toCSV } from '../app/js/core/output.js';
+import { toText, toCSV, toJSON } from '../app/js/core/output.js';
+import { mergeReads } from '../app/js/extractors/base.js';
 
 const DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures');
 let pass = 0, fail = 0;
@@ -51,10 +52,10 @@ r = run(cr, 'cr_grid.txt');
 eq('cr mv', r.mv_file_no.value, '1305-00000445566'); eq('cr mv OK', r.mv_file_no.status, 'OK');
 eq('cr plate fixed', r.plate_no.value, 'ABC 1234'); eq('cr plate VERIFY', r.plate_no.status, 'VERIFY');
 eq('cr engine', r.engine_no.value, '1NZ987654'); eq('cr chassis', r.chassis_no.value, 'JTDBT923X01234567');
-eq('cr vin NF', r.vin.status, 'NOT FOUND'); eq('cr vin note', /17-character VIN/.test(r.vin.note), true);
+eq('cr vin NF', r.vin.status, 'NOT FOUND'); eq('cr vin hidden (old layout)', r.vin.hidden, true);
 eq('cr make', r.make.value, 'TOYOTA'); eq('cr series', r.series.value, 'COROLLA ALTIS'); eq('cr body', r.body_type.value, 'SEDAN');
 eq('cr year fixed', r.year_model.value, '2019'); eq('cr year VERIFY', r.year_model.status, 'VERIFY');
-eq('cr color', r.color.value, 'SILVER METALLIC'); eq('cr fuel', r.fuel.value, 'GAS'); eq('cr type', r.vehicle_type.value, 'CAR');
+eq('cr color', r.color.value, 'SILVER METALLIC'); eq('cr fuel', r.fuel.value, 'GAS'); eq('cr denomination', r.denomination.value, 'CAR');
 eq('cr owner', r.owner_name.value, 'NAGA TRADING CORPORATION'); eq('cr address', r.owner_address.value, 'PANGANIBAN DRIVE, NAGA CITY, CAMARINES SUR');
 eq('cr crno', r.cr_no.value, '556677889'); eq('cr date', r.date_registered.value, 'August 1, 2022');
 eq('cr piston', r.piston_displacement.value, '1497'); eq('cr cyl', r.cylinders.value, '4'); eq('cr gross', r.gross_wt.value, '1650');
@@ -109,8 +110,78 @@ eq('dl codes', F.dlCodes('A, Al, B').value, 'A, A1, B');
 // --- output format
 const res = { docType: 'cr', sectionTitles: cr.sectionTitles, fields: cr.extract(load('cr_grid.txt')).fields };
 const txt = toText(res);
-eq('text header', txt.startsWith('VEHICLE INFORMATION\n\nPlate No.: ABC 1234 [VERIFY]\nMV File No.: 1305-00000445566'), true);
+eq('text header', txt.startsWith('VEHICLE INFORMATION\n\nMV File No.: 1305-00000445566\nPlate No.: ABC 1234 [VERIFY]'), true);
+eq('text skips hidden', /\nVIN:|Max Power/.test(txt), false);
 eq('csv rows', toCSV(res).trim().split('\r\n').length, 2);
+
+// --- ruled CR fixtures (fictitious data; "|" = box border, "+---+" = horizontal rule)
+{
+  const rr = (f) => Object.fromEntries(cr.extract(load(f)).fields.map((x) => [x.key, x]));
+  const o = rr('cr_old_ruled.txt');
+  eq('old layout detected', o.mv_file_no.layout, 'old');
+  eq('old mv', o.mv_file_no.value, '1310-00000123123'); eq('old mv OK', o.mv_file_no.status, 'OK');
+  eq('old blank plate NF', o.plate_no.status, 'NOT FOUND'); eq('old blank plate note', /^Blank/.test(o.plate_no.note), true);
+  eq('old engine', o.engine_no.value, 'KF31E9876543'); eq('old chassis', o.chassis_no.value, 'MH1KF3110KK654321');
+  eq('old denomination', o.denomination.value, 'MOTORCYCLE WITHOUT SIDE CAR'); eq('old cyl', o.cylinders.value, '1');
+  eq('old body type fixed', o.body_type.value, 'MOTORCYCLE'); eq('old body type VERIFY', o.body_type.status, 'VERIFY');
+  eq('old body no blank', o.body_no.status, 'NOT FOUND'); eq('old year', o.year_model.value, '2019');
+  eq('old gross', o.gross_wt.value, '230'); eq('old shipping', o.shipping_wt.value, '105'); eq('old net cap', o.net_capacity.value, '125');
+  eq('old owner (not the receipt payer)', o.owner_name.value, 'SANTOS, MARIA CLARA L.');
+  eq('old address', o.owner_address.value, '45 MABINI ST., SAN ROQUE, LEGAZPI CITY, ALBAY');
+  eq('old encumbered blank', o.encumbered_to.status, 'NOT FOUND');
+  eq('old OR no (not the receipt no.)', o.or_no.value, '1234567890123'); eq('old OR date', o.or_date.value, 'March 15, 2019');
+  eq('old amount (not the receipt amount)', o.amount.value, '1,250.00');
+  eq('old CR no numeric', o.cr_no.value, '123456789'); eq('old CR date', o.date_registered.value, 'March 15, 2019');
+  eq('old office code not from receipt', o.office_code.value, '');
+  eq('old new-only fields hidden', ['vin', 'vehicle_type', 'vehicle_category', 'max_power', 'color', 'classification', 'passenger_capacity', 'year_rebuilt', 'remarks'].every((k) => o[k].hidden), true);
+  const allOld = Object.values(o).map((x) => x.value).join(' | ');
+  eq('old signatory never copied', /DELA PAZ|CHIEF|REYES|9988776655|0999|9,999/i.test(allOld), false);
+  eq('VALIDONLYWHENSIGNED never CR No.', /VALID/i.test(o.cr_no.value), false);
+
+  const n = rr('cr_new_ruled.txt');
+  eq('new layout detected', n.mv_file_no.layout, 'new');
+  eq('new plate', n.plate_no.value, 'NBC 4321'); eq('new mv', n.mv_file_no.value, '0412-00000765432');
+  eq('new engine from box position', n.engine_no.value, '2NR7654321'); eq('new engine VERIFY', n.engine_no.status, 'VERIFY');
+  eq('new chassis', n.chassis_no.value, 'PA1BB3HE0P1234567');
+  eq('new VIN N/A kept', n.vin.value, 'N/A'); eq('new VIN N/A OK', n.vin.status, 'OK');
+  eq('new vehicle type', n.vehicle_type.value, 'CAR'); eq('new category', n.vehicle_category.value, 'M1'); eq('new make', n.make.value, 'TOYOTA');
+  eq('new capacity', n.passenger_capacity.value, '5'); eq('new color', n.color.value, 'PEARL WHITE'); eq('new fuel', n.fuel.value, 'GASOLINE');
+  eq('new class', n.classification.value, 'PRIVATE'); eq('new body', n.body_type.value, 'SEDAN'); eq('new series', n.series.value, 'VIOS 1.3 XLE');
+  eq('new gross', n.gross_wt.value, '1550'); eq('new net', n.net_wt.value, '1075'); eq('new year', n.year_model.value, '2023');
+  eq('new rebuilt N/A', n.year_rebuilt.value, 'N/A'); eq('new piston', n.piston_displacement.value, '1329'); eq('new power N/A', n.max_power.value, 'N/A');
+  eq('new owner', n.owner_name.value, 'DELA CRUZ, ROSA M.'); eq('new address', n.owner_address.value, '12 RIZAL AVE., POBLACION, SAN PABLO CITY, LAGUNA');
+  eq('new encumbered N/A', n.encumbered_to.value, 'N/A'); eq('new OR', n.or_no.value, '000000301234567'); eq('new amount', n.amount.value, 'PHP 3,210.50');
+  eq('new remarks blank', n.remarks.status, 'NOT FOUND');
+  eq('new CR no at bottom', n.cr_no.value, '0012345678'); eq('new field office', n.field_office.value, 'SAN PABLO DISTRICT OFFICE');
+  eq('new office code', n.office_code.value, '0412'); eq('new CR date', n.date_registered.value, 'June 30, 2023');
+  eq('new old-only fields hidden', ['denomination', 'cylinders', 'body_no', 'shipping_wt', 'net_capacity', 'telephone'].every((k) => n[k].hidden), true);
+  eq('new signatory never copied', /LOPEZ|CHIEF/i.test(Object.values(n).map((x) => x.value).join(' ')), false);
+
+  // exports: hidden fields left out, group heading present
+  const resN = { docType: 'cr', sectionTitles: cr.sectionTitles, fields: cr.extract(load('cr_new_ruled.txt')).fields };
+  const tn = toText(resN);
+  eq('text group heading', tn.includes('\nDetails of First Registration\nO.R. No.: 000000301234567'), true);
+  eq('text no hidden', /Denomination|Shipping Wt/.test(tn), false);
+  eq('text Other section', /\n\nOTHER\n\nCR No\.: 0012345678/.test(tn), true);
+  const csv = toCSV(resN);
+  eq('csv no hidden', /Denomination/.test(csv), false); eq('csv group label', csv.includes('O.R. No. (Details of First Registration)'), true);
+  const js = JSON.parse(toJSON(resN));
+  eq('json no hidden', 'denomination' in js.fields, false); eq('json layout', js.form_layout, 'LTO Form No. 3 (Revised December 2020)');
+  eq('json group', js.fields.or_no.group, 'Details of First Registration');
+}
+eq('denomination spaces lost', cr.fields.find((x) => x.key === 'denomination').format('LEWITHOUTSIDECAR').value, 'LE WITHOUT SIDE CAR');
+eq('year range', cr.fields.find((x) => x.key === 'year_model').format('1949').ok, false);
+eq('cylinders range', cr.fields.find((x) => x.key === 'cylinders').format('40').ok, false);
+eq('fuel fix VERIFY', cr.fields.find((x) => x.key === 'fuel').format('DIESFL').fixed, true);
+{
+  const sf = cr.fields.find((x) => x.key === 'series').format;
+  eq('series bracket → I (VERIFY)', sf('CLICK 125]').value + '|' + sf('CLICK 125]').fixed, 'CLICK 125I|true');
+  eq('series clean untouched', sf('VIOS 1.5 G CVT').fixed, false);
+  // whole-page reading with more spaces wins over a box reading that lost a space; never OK
+  const mk = (v, c) => ({ key: 'series', label: 'Series', value: v, raw: v, status: 'OK', confidence: c, note: '' });
+  const m = mergeReads([[mk('VIOS 1.5G CVT', 90)], [mk('VIOS 1.5G CVT', 90)]], { fallback: [mk('VIOS 1.5 G CVT', 92)] });
+  eq('spacing: page value kept as VERIFY', m[0].value + '|' + m[0].status, 'VIOS 1.5 G CVT|VERIFY');
+}
 
 console.log(`\nUnit tests: ${pass} passed, ${fail} failed`);
 process.exitCode = fail ? 1 : 0;

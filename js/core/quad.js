@@ -98,7 +98,7 @@ function fillHoles(mask, w, h) {
   return { mask: out, size: n };
 }
 
-function convexHull(pts) {
+export function convexHull(pts) {
   pts = pts.slice().sort((a, b) => a.x - b.x || a.y - b.y);
   const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
   const lo = [], up = [];
@@ -113,7 +113,7 @@ export function polyArea(p) {
 
 /** Reduce a convex polygon to 4 vertices. Each step removes the vertex whose removal changes the area least,
  *  then the 4 corners are refined by intersecting lines fitted to the hull edges between them. */
-function hullToQuad(hull) {
+export function hullToQuad(hull) {
   let p = hull.slice();
   while (p.length > 4) {
     let bi = 0, ba = Infinity;
@@ -129,7 +129,7 @@ function hullToQuad(hull) {
 
 /** Fit a straight line to the boundary points of each side (ignoring the 15% near each corner, where
  *  rounded card corners / glare eat into the shape) and intersect neighbouring lines → precise corners. */
-function refineByLines(q, pts) {
+export function refineByLines(q, pts) {
   const lines = [];
   for (let i = 0; i < 4; i++) {
     const a = q[i], b = q[(i + 1) % 4];
@@ -160,7 +160,7 @@ function refineByLines(q, pts) {
   return out;
 }
 
-function cornerAnglesOk(q) {
+export function cornerAnglesOk(q) {
   for (let i = 0; i < 4; i++) {
     const a = q[(i + 3) % 4], b = q[i], c = q[(i + 1) % 4];
     const v1 = { x: a.x - b.x, y: a.y - b.y }, v2 = { x: c.x - b.x, y: c.y - b.y };

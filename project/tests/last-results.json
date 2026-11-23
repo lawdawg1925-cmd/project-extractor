@@ -14,7 +14,7 @@
     "silentErrors": 0,
     "missing": 0,
     "notFoundRespected": "2/2",
-    "sec": "1.7"
+    "sec": "1.9"
   },
   {
     "file": "license2_nonpro_clean.png",
@@ -31,7 +31,7 @@
     "silentErrors": 0,
     "missing": 0,
     "notFoundRespected": "1/1",
-    "sec": "1.6"
+    "sec": "1.7"
   },
   {
     "file": "license_rotated90.jpg",
@@ -48,7 +48,7 @@
     "silentErrors": 0,
     "missing": 0,
     "notFoundRespected": "2/2",
-    "sec": "3.0"
+    "sec": "3.2"
   },
   {
     "file": "license_photo_skew.jpg",
@@ -65,7 +65,7 @@
     "silentErrors": 0,
     "missing": 0,
     "notFoundRespected": "2/2",
-    "sec": "1.7"
+    "sec": "1.9"
   },
   {
     "file": "license_blurry_lowcontrast.jpg",
@@ -82,7 +82,7 @@
     "silentErrors": 0,
     "missing": 0,
     "notFoundRespected": "1/1",
-    "sec": "1.5"
+    "sec": "1.6"
   },
   {
     "file": "cr_clean.png",
@@ -93,13 +93,13 @@
     "mode": "standard",
     "conf": 92,
     "accuracy": "21/21 (100%)",
-    "okCorrect": 20,
-    "verifyCorrect": 1,
+    "okCorrect": 19,
+    "verifyCorrect": 2,
     "flaggedWrong": 0,
     "silentErrors": 0,
     "missing": 0,
     "notFoundRespected": "1/1",
-    "sec": "1.6"
+    "sec": "8.4"
   },
   {
     "file": "cr2_motorcycle_clean.png",
@@ -108,7 +108,7 @@
     "typeOk": true,
     "rot": 0,
     "mode": "standard",
-    "conf": 91,
+    "conf": 92,
     "accuracy": "21/21 (100%)",
     "okCorrect": 18,
     "verifyCorrect": 3,
@@ -116,7 +116,7 @@
     "silentErrors": 0,
     "missing": 0,
     "notFoundRespected": "1/1",
-    "sec": "1.6"
+    "sec": "8.8"
   },
   {
     "file": "cr_photo_skew.jpg",
@@ -127,13 +127,13 @@
     "mode": "standard",
     "conf": 94,
     "accuracy": "21/21 (100%)",
-    "okCorrect": 21,
-    "verifyCorrect": 0,
+    "okCorrect": 18,
+    "verifyCorrect": 3,
     "flaggedWrong": 0,
     "silentErrors": 0,
     "missing": 0,
     "notFoundRespected": "1/1",
-    "sec": "1.8"
+    "sec": "9.3"
   },
   {
     "file": "cr_cropped_missing_owner.jpg",
@@ -142,15 +142,15 @@
     "typeOk": true,
     "rot": 0,
     "mode": "standard",
-    "conf": 92,
+    "conf": 89,
     "accuracy": "19/19 (100%)",
-    "okCorrect": 18,
-    "verifyCorrect": 1,
+    "okCorrect": 16,
+    "verifyCorrect": 3,
     "flaggedWrong": 0,
     "silentErrors": 0,
     "missing": 0,
     "notFoundRespected": "3/3",
-    "sec": "1.2"
+    "sec": "6.1"
   },
   {
     "file": "cr_rotated180_blurry.jpg",
@@ -161,13 +161,13 @@
     "mode": "standard",
     "conf": 90,
     "accuracy": "19/21 (90%)",
-    "okCorrect": 17,
-    "verifyCorrect": 2,
+    "okCorrect": 15,
+    "verifyCorrect": 4,
     "flaggedWrong": 1,
     "silentErrors": 0,
     "missing": 1,
     "notFoundRespected": "1/1",
-    "sec": "6.1"
+    "sec": "6.7"
   },
   {
     "file": "license_ltonew_flat.png",
@@ -184,7 +184,7 @@
     "silentErrors": 0,
     "missing": 0,
     "notFoundRespected": "2/2",
-    "sec": "1.6"
+    "sec": "1.9"
   },
   {
     "file": "license_ltonew_handheld_tilt.jpg",
@@ -201,7 +201,7 @@
     "silentErrors": 0,
     "missing": 0,
     "notFoundRespected": "2/2",
-    "sec": "1.7"
+    "sec": "1.9"
   },
   {
     "file": "license10_clean.png",
@@ -210,7 +210,7 @@
     "typeOk": true,
     "rot": 0,
     "mode": "standard",
-    "conf": 94,
+    "conf": 90,
     "accuracy": "17/17 (100%)",
     "okCorrect": 15,
     "verifyCorrect": 2,
@@ -218,7 +218,7 @@
     "silentErrors": 0,
     "missing": 0,
     "notFoundRespected": "2/2",
-    "sec": "1.6"
+    "sec": "1.8"
   },
   {
     "file": "cr_old_layout_clean.png",
@@ -229,13 +229,13 @@
     "mode": "standard",
     "conf": 94,
     "accuracy": "21/21 (100%)",
-    "okCorrect": 20,
-    "verifyCorrect": 1,
+    "okCorrect": 19,
+    "verifyCorrect": 2,
     "flaggedWrong": 0,
     "silentErrors": 0,
     "missing": 0,
     "notFoundRespected": "1/1",
-    "sec": "1.4"
+    "sec": "1.8"
   },
   {
     "file": "license10_perspective_wood.jpg",
@@ -252,7 +252,7 @@
     "silentErrors": 0,
     "missing": 2,
     "notFoundRespected": "2/2",
-    "sec": "1.8"
+    "sec": "2.0"
   },
   {
     "file": "license_perspective_glare_clutter.jpg",
@@ -269,7 +269,7 @@
     "silentErrors": 0,
     "missing": 1,
     "notFoundRespected": "2/2",
-    "sec": "1.6"
+    "sec": "1.8"
   },
   {
     "file": "license10_lowlight_motion.jpg",
@@ -286,7 +286,7 @@
     "silentErrors": 0,
     "missing": 4,
     "notFoundRespected": "2/2",
-    "sec": "1.2"
+    "sec": "1.4"
   },
   {
     "file": "cr_perspective_wood_glare.jpg",
@@ -295,15 +295,15 @@
     "typeOk": true,
     "rot": 0,
     "mode": "standard",
-    "conf": 92,
+    "conf": 93,
     "accuracy": "20/21 (95%)",
-    "okCorrect": 20,
-    "verifyCorrect": 0,
+    "okCorrect": 19,
+    "verifyCorrect": 1,
     "flaggedWrong": 1,
     "silentErrors": 0,
     "missing": 0,
     "notFoundRespected": "1/1",
-    "sec": "1.8"
+    "sec": "8.6"
   },
   {
     "file": "cr_old_perspective_clutter_lowlight.jpg",
@@ -320,6 +320,40 @@
     "silentErrors": 0,
     "missing": 3,
     "notFoundRespected": "1/1",
-    "sec": "8.7"
+    "sec": "9.5"
+  },
+  {
+    "file": "cr_new_layout_clean.png",
+    "kind": "clean",
+    "detected": "cr",
+    "typeOk": true,
+    "rot": 0,
+    "mode": "standard",
+    "conf": 94,
+    "accuracy": "30/30 (100%)",
+    "okCorrect": 21,
+    "verifyCorrect": 9,
+    "flaggedWrong": 0,
+    "silentErrors": 0,
+    "missing": 0,
+    "notFoundRespected": "1/1",
+    "sec": "11.2"
+  },
+  {
+    "file": "cr_new_layout_skew.jpg",
+    "kind": "degraded",
+    "detected": "cr",
+    "typeOk": true,
+    "rot": 0,
+    "mode": "standard",
+    "conf": 89,
+    "accuracy": "29/30 (97%)",
+    "okCorrect": 24,
+    "verifyCorrect": 5,
+    "flaggedWrong": 0,
+    "silentErrors": 0,
+    "missing": 1,
+    "notFoundRespected": "1/1",
+    "sec": "11.9"
   }
 ]

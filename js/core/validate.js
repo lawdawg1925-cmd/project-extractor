@@ -11,7 +11,7 @@ export function buildMessages(result, extractor) {
   for (const f of fields) {
     if (crit[f.key] && (f.status === STATUS.NOT_FOUND || f.status === STATUS.UNREADABLE)) msgs.push({ level: 'error', text: crit[f.key] });
   }
-  const missing = fields.filter((f) => f.status === STATUS.NOT_FOUND && !f.optional && f.raw === '' && !(f.note || '').startsWith('Not printed') && !(f.note || '').startsWith('No middle') && !(f.note || '').startsWith('Name not found'));
+  const missing = fields.filter((f) => f.status === STATUS.NOT_FOUND && !f.optional && !f.hidden && !/^Blank/.test(f.note || '') && f.raw === '' && !(f.note || '').startsWith('Not printed') && !(f.note || '').startsWith('No middle') && !(f.note || '').startsWith('Name not found'));
   // fields that have labels and were not found → probably cut off / covered
   const labelled = missing.filter((f) => (extractor.fields.find((d) => d.key === f.key) || {}).labels);
   if (labelled.length >= 2) msgs.push({ level: 'error', text: `${extractor.cutoffMessage} (Not found: ${labelled.map((f) => f.label).join(', ')}.)` });

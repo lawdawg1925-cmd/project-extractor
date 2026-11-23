@@ -1,7 +1,8 @@
 // GRX Scan — UI controller. All processing happens in this browser tab.
 import { extractDocument } from './core/pipeline.js';
 import { rotate90, crop as cropImg } from './core/image.js';
-import { detectDocument, isFullImage } from './core/quad.js';
+import { isFullImage } from './core/quad.js';
+import { detectOutline } from './core/table.js';
 import { toText, toCSV, toJSON, fieldText } from './core/output.js';
 import { STATUS } from './core/status.js';
 import { getRecognizer, shutdown } from './core/ocr-browser.js';
@@ -60,11 +61,11 @@ function rebuildWorking() {
 // ---------- document corners (automatic, optionally adjusted by dragging) ----------
 function detectCorners() {
   const img = state.working;
-  state.corners = null; state.quadAuto = false;
+  state.corners = null; state.quadAuto = false; state.outlineMethod = null;
   if (img) {
     let q = null;
-    try { q = detectDocument(img); } catch (e) { console.warn(e); }
-    if (q && q.confidence >= 0.6) { state.corners = q.corners.map((p) => ({ x: p.x, y: p.y })); state.quadAuto = true; }
+    try { q = detectOutline(img, { docType: (document.querySelector('input[name=doctype]:checked') || {}).value || 'auto' }); } catch (e) { console.warn(e); }
+    if (q && q.confidence >= 0.6) { state.corners = q.corners.map((p) => ({ x: p.x, y: p.y })); state.quadAuto = true; state.outlineMethod = q.method || null; }
     else state.corners = [{ x: 0, y: 0 }, { x: img.width - 1, y: 0 }, { x: img.width - 1, y: img.height - 1 }, { x: 0, y: img.height - 1 }];
   }
   drawQuad();
@@ -191,7 +192,7 @@ $('btnExtract').onclick = async () => {
     // corners: the outline shown on the preview (auto-detected or dragged); null = read the whole image
     const corners = $('chkStraighten').checked && state.corners ? state.corners.map((p) => ({ ...p })) : null;
     const result = await extractDocument(state.working, {
-      recognize, docType, corners,
+      recognize, docType, corners, outlineMethod: state.outlineMethod || null,
       onProgress: ({ text }) => { stageText = text; setProgress(0.05, text); },
     });
     showStraightened(result.straightened ? result.processedImage : null);
@@ -233,11 +234,16 @@ function renderResult() {
   $('rawText').textContent = r.rawText || '';
   const form = $('fieldsForm'); form.innerHTML = '';
   if (!r.fields.length) { $('step5').classList.add('hidden'); return; }
-  let section = null;
+  let section = null, group = null;
   for (const f of r.fields) {
+    if (f.hidden) continue; // not printed on this form layout
     if (f.section !== section) {
-      section = f.section;
+      section = f.section; group = null;
       const h = document.createElement('div'); h.className = 'section-title'; h.textContent = r.sectionTitles[section]; form.appendChild(h);
+    }
+    if ((f.group || null) !== group) {
+      group = f.group || null;
+      if (group) { const g = document.createElement('div'); g.className = 'group-title'; g.textContent = group; form.appendChild(g); }
     }
     form.appendChild(fieldRow(f));
   }

@@ -15,7 +15,7 @@ const page = await browser.newPage();
 await page.goto(`http://localhost:${port}/index.html`);
 await page.evaluate(async () => { await navigator.serviceWorker.ready; });
 await new Promise((r) => setTimeout(r, 2500));
-const cached = await page.evaluate(async () => (await (await caches.open('grx-scan-v5')).keys()).length);
+const cached = await page.evaluate(async () => (await (await caches.open('grx-scan-v6')).keys()).length);
 server.close();
 await page.setOfflineMode(true);
 await page.reload({ waitUntil: 'load' });

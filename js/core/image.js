@@ -75,14 +75,16 @@ export function crop(img, r) {
 }
 
 /** Luminance grayscale (keeps RGBA layout). Colored ink (red CR numbers, blue headers) stays dark enough. */
-export function grayscale(img) {
+export function grayscale(img, { stampFree = false } = {}) {
   const out = make(img.width, img.height);
   const d = img.data, o = out.data;
   for (let i = 0; i < d.length; i += 4) {
     // use min-channel blend so colored text on light paper stays dark
     const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
     const mn = Math.min(d[i], d[i + 1], d[i + 2]);
-    const g = 0.6 * lum + 0.4 * mn;
+    let g = 0.6 * lum + 0.4 * mn;
+    // yellow / ochre rubber-stamp ink over the text (CRs): render it light so it does not mask letters
+    if (stampFree && d[i] - d[i + 2] > 45 && d[i + 1] - d[i + 2] > 35 && Math.abs(d[i] - d[i + 1]) < 70) g = Math.max(d[i], d[i + 1]) * 0.95;
     o[i] = o[i + 1] = o[i + 2] = g; o[i + 3] = 255;
   }
   return out;
@@ -160,9 +162,9 @@ export function adaptiveThreshold(img, win = 31, k = 0.25) {
  * mode 'standard': scale + grayscale + contrast stretch.
  * mode 'enhanced': standard + sharpen + adaptive threshold (for blurry/shadowed photos).
  */
-export function preprocess(img, { mode = 'standard', target = 2000 } = {}) {
+export function preprocess(img, { mode = 'standard', target = 2000, stampFree = false } = {}) {
   let out = scaleToLongSide(img, target);
-  out = grayscale(out);
+  out = grayscale(out, { stampFree });
   out = normalizeContrast(out);
   if (mode === 'enhanced') {
     out = sharpen(out, 0.8);

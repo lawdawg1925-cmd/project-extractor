@@ -11,6 +11,17 @@ puts the information into the right fields → you check/correct → **Copy All*
 > 🔒 **Everything happens on your own device.** The photo is never uploaded, nothing is saved,
 > and it works **without internet**. Press **Clear / Delete** when done.
 
+### New: CR reader rebuilt (box-by-box, both CR layouts)
+- **Both CR layouts:** the old *LTO Form No. 3* and the new *Form No. 3 (Revised December 2020)* — the layout is detected
+  and fields that are not printed on that layout are hidden.
+- **Locks onto the ruled CR table** and reads it box by box, so a value never leaks into the next box. Everything below the
+  table — the legal NOTE/footer, the signatory and signature block, stamps and an OFFICIAL RECEIPT printed underneath — is ignored.
+- **Field order follows the form labels.** O.R. No., O.R. Date and Amount are grouped under *Details of First Registration*;
+  CR No., CR Date, Field Office and Office Code are in the *Other* section. CR No. must be numeric ("VALID ONLY WHEN SIGNED" is never taken).
+- **Checked against known lists / formats** (fuel, body type, denomination, years, weights, VIN rules). Any correction is marked VERIFY;
+  engine and chassis numbers stay VERIFY unless every reading agrees. A printed **N/A** is kept as `N/A` (OK); an empty box is NOT FOUND.
+- Text, CSV and JSON exports use the same labels, grouping and order (JSON also states the detected `form_layout`).
+
 ### New in v0.2 (phase 2)
 - **Automatic document edges + straightening.** After you take/choose a photo, a yellow outline marks the card/CR edges and the
   photo is straightened (perspective-corrected) before reading. If the outline is wrong, drag the round corner handles onto

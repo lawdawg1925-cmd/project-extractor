@@ -11,7 +11,7 @@ import * as F from '../app/js/core/formats.js';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const expected = JSON.parse(fs.readFileSync(path.join(ROOT, 'samples/expected.json'), 'utf8'));
 const filter = process.argv[2] || '';
-const DATE_KEYS = new Set(['date_of_birth', 'expiration_date', 'date_registered']);
+const DATE_KEYS = new Set(['date_of_birth', 'expiration_date', 'date_registered', 'or_date']);
 const norm = (k, v) => {
   if (v == null) return null;
   if (DATE_KEYS.has(k)) { const d = F.date(v); return d.ok ? d.value : v; }

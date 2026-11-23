@@ -1,0 +1,39 @@
+REPUBLIC OF THE PHILIPPINES                                              LTO Form No. 3
+DEPARTMENT OF TRANSPORTATION
+LAND TRANSPORTATION OFFICE
+CERTIFICATE OF REGISTRATION        CR No.  123456789        DATE:  03/15/2019
++--------------------------------------------------------------------------------------------+
+| MV File No.           | Plate No.            | Engine No.             | Chassis No.          |
+| 1310-00000123123      |                      | KF31E9876543           | MH1KF3110KK654321    |
++--------------------------------------------------------------------------------------------+
+| Denomination                | Piston Displacement | No. of Cylinders  | Fuel               |
+| MOTORCYCLE WITHOUT SIDE CAR | 125                 | 1                 | GAS                |
++--------------------------------------------------------------------------------------------+
+| Make          | Series          | Body Type          | Body No.        | Year Model          |
+| HONDA         | XRM 125         | MOTORCYGLE         |                 | 2019                |
++--------------------------------------------------------------------------------------------+
+| Gross Wt.             | Net Wt.              | Shipping Wt.           | Net Capacity         |
+| 230                   | 105                  | 105                    | 125                  |
++--------------------------------------------------------------------------------------------+
+| Complete Owner's Name                        | Telephone No./Contact Details               |
+| SANTOS, MARIA CLARA L.                       |                                             |
++--------------------------------------------------------------------------------------------+
+| Complete Address                                                                           |
+| 45 MABINI ST., SAN ROQUE, LEGAZPI CITY, ALBAY                                              |
++--------------------------------------------------------------------------------------------+
+| Encumbered To                                                                              |
+|                                                                                            |
++--------------------------------------------------------------------------------------------+
+| Details of First Registration | O.R. No.             | O.R. Date          | Amt.             |
+|                               | 1234567890123        | 03/15/2019         | 1,250.00         |
++--------------------------------------------------------------------------------------------+
+This is to certify that the Motor Vehicle described herein is duly registered. This certificate is VALIDONLYWHENSIGNED
+by authorized LTO Officials, Properly sealed and accompanied by Official Receipt as proof of payment.
+REGISTRANT'S SIGNATURE            BY:           JUAN P. DELA PAZ
+                                                CHIEF OF OFFICE
+                                                Signature/Date
+NOTE: Any unauthorized erasure or alteration hereon will invalidate this document.
+OFFICIAL RECEIPT        No.  9988776655
+Field Office Code:  0999
+RECEIVED FROM (Last name, First name, MI)     REYES, PEDRO
+PAYMENT DETAILS     Amount  9,999.00

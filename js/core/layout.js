@@ -17,6 +17,7 @@ export function normalizeOcr(input) {
     (ln.words || []).forEach((w) => {
       if (!w.text || !w.text.trim()) return;
       const nw = { text: w.text.trim(), conf: w.confidence ?? w.conf ?? 0, bbox: { ...w.bbox }, line: li };
+      if (w.cell !== undefined) nw.cell = w.cell;
       words.push(nw); lw.push(nw);
     });
     if (lw.length) lines.push({ text: lw.map((w) => w.text).join(' '), words: lw, idx: li });
@@ -87,15 +88,24 @@ export function horizontalRatio(ocr) {
   return ws.filter((w) => (w.bbox.x1 - w.bbox.x0) > (w.bbox.y1 - w.bbox.y0)).length / ws.length;
 }
 
-/** Plain-text fixture → synthetic word boxes (char width 20px, line height 40px). */
+/**
+ * Plain-text fixture → synthetic word boxes (char width 20px, line height 40px).
+ * Ruled-form fixtures may draw their boxes ("+----+----+" rule rows, "|" box sides): every word then
+ * gets the id of the box it is in, like the box-by-box OCR of a real CR.
+ */
 export function fromPlainText(text, conf = 95) {
   const CW = 20, LH = 40;
   const words = [], lines = [];
-  text.split(/\r?\n/).forEach((raw, li) => {
+  const rows = text.split(/\r?\n/);
+  const ruled = rows.some((r) => /^\s*\+[-+=]+\+\s*$/.test(r));
+  let band = 0;
+  rows.forEach((raw, li) => {
+    if (ruled && /^\s*\+[-+=]+\+\s*$/.test(raw)) { band++; return; }
     const lw = [];
-    const re = /\S+/g; let m;
+    const re = ruled ? /[^\s|]+/g : /\S+/g; let m;
     while ((m = re.exec(raw))) {
       const w = { text: m[0], conf, bbox: { x0: m.index * CW, x1: (m.index + m[0].length) * CW, y0: li * LH, y1: li * LH + 28 }, line: li };
+      if (ruled && raw.includes('|')) w.cell = band * 100 + (raw.slice(0, m.index).match(/\|/g) || []).length; // text outside the ruled boxes has no box
       words.push(w); lw.push(w);
     }
     if (lw.length) lines.push({ text: lw.map((w) => w.text).join(' '), words: lw, idx: li });
@@ -155,9 +165,19 @@ export function readValue(hit, ctx, opts = {}) {
   let colRight = Infinity;
   for (const o of ctx.labelHits) {
     if (o === hit) continue;
+    if (hit.words[0].cell !== undefined && o.words[0].cell !== hit.words[0].cell) continue; // ruled box: its own border is the limit
     if (o.bbox.x0 > hit.bbox.x1 && vOverlap(o.bbox, hit.bbox) > 0.4) colRight = Math.min(colRight, o.bbox.x0 - lh * 0.5);
   }
-  const free = (w) => !ctx.labelWords.has(w);
+  // ruled form read box by box: the value must be in the label's own box (and carry letters/digits)
+  const cell = hit.words[0].cell;
+  const boxed = cell !== undefined;
+  const free = boxed ? (w) => !ctx.labelWords.has(w) && w.cell === cell && /[A-Za-z0-9]/.test(w.text) && !(w.conf < 10 && w.text.replace(/[^A-Za-z0-9]/g, '').length <= 2) : (w) => !ctx.labelWords.has(w);
+  // left boundary inside a shared box = nearest other label to the left on the same row
+  let leftLabel = -Infinity;
+  if (boxed) for (const o of ctx.labelHits) {
+    if (o === hit || o.words[0].cell !== cell) continue;
+    if (o.bbox.x1 < hit.bbox.x0 && vOverlap(o.bbox, hit.bbox) > 0.4) leftLabel = Math.max(leftLabel, o.bbox.x1 + lh * 0.5);
+  }
   if (where === 'right') {
     // Same printed row only. On tilted photos a value row ABOVE/BELOW can drift into the label's
     // y-band at the far right, so a word must sit on the label's own OCR line, or on a line whose
@@ -179,15 +199,19 @@ export function readValue(hit, ctx, opts = {}) {
     return null;
   }
   // BELOW: same column, first row(s) under the label, above the next label in this column
-  const colLeft = hit.bbox.x0 - lh * 0.6;
+  // a box shared by two labels (Gross Wt. | Net Wt.): the value starts near its own label
+  const shared = boxed && ctx.labelHits.some((o) => o !== hit && o.words[0].cell === cell && vOverlap(o.bbox, hit.bbox) > 0.3);
+  const colLeft = boxed ? (shared ? Math.max(leftLabel, hit.bbox.x0 - lh * Math.max(1, opts.leftSlack || 0)) : leftLabel) : hit.bbox.x0 - lh * (opts.leftSlack || 0.6);
   const maxGap = lh * (opts.maxGap || 3.5);
   let nextLabelY = Infinity;
   for (const o of ctx.labelHits) {
     if (o === hit || o.bbox.y0 <= hit.bbox.y1 - 2) continue;
     const ox0 = o.bbox.x0, ox1 = o.bbox.x1;
-    if (ox1 > colLeft && ox0 < Math.min(colRight, hit.bbox.x1 + lh * 12)) nextLabelY = Math.min(nextLabelY, o.bbox.y0);
+    if (boxed && o.words[0].cell !== cell) continue;
+    if (ox1 > colLeft && ox0 < Math.min(colRight, boxed ? Infinity : hit.bbox.x1 + lh * 12)) nextLabelY = Math.min(nextLabelY, o.bbox.y0);
   }
-  const cand = ctx.ocr.words.filter((w) => free(w) && w.bbox.y0 > hit.bbox.y1 - lh * 0.3 &&
+  const hcy = (hit.bbox.y0 + hit.bbox.y1) / 2;
+  const cand = ctx.ocr.words.filter((w) => free(w) && (w.bbox.y0 > hit.bbox.y1 - lh * 0.3 || (boxed && (w.bbox.y0 + w.bbox.y1) / 2 > hcy + lh * 0.45 && w.bbox.x0 > hit.bbox.x1)) &&
     w.bbox.y0 < nextLabelY - 2 && w.bbox.x0 >= colLeft && w.bbox.x0 < colRight);
   if (!cand.length) return null;
   cand.sort((a, b) => a.bbox.y0 - b.bbox.y0);
@@ -209,6 +233,23 @@ export function readValue(hit, ctx, opts = {}) {
     }
   }
   const ws = [];
+  if (boxed) {
+    // inside a box: split each row at wide gaps and keep the strongest piece (stray stamp marks and
+    // specks are short and weak; the printed value is long and confident)
+    for (const r of take) {
+      r.words.sort((a, b) => a.bbox.x0 - b.bbox.x0);
+      const segs = [];
+      for (const w of r.words) {
+        const prev = segs.length ? segs[segs.length - 1][segs[segs.length - 1].length - 1] : null;
+        if (prev && w.bbox.x0 - prev.bbox.x1 <= Math.max(hgt(prev.bbox), hgt(w.bbox)) * (opts.colGap || 1.8)) segs[segs.length - 1].push(w);
+        else segs.push([w]);
+      }
+      const score = (sg) => sg.reduce((a, w) => a + (w.text.match(/[A-Za-z0-9]/g) || []).length * Math.max(5, w.conf) * hgt(w.bbox), 0);
+      segs.sort((a, b) => score(b) - score(a));
+      ws.push(...segs[0]);
+    }
+    return pack(ws, 'below');
+  }
   for (const r of take) {
     r.words.sort((a, b) => a.bbox.x0 - b.bbox.x0);
     // within a row, drop words separated by a huge gap (likely another column / stray mark)

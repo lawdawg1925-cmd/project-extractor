@@ -1,10 +1,10 @@
 // Service worker: caches ONLY the app's own files (code + OCR engine) so the tool opens offline.
 // It never caches photos or extracted data (those never touch the network at all).
-const CACHE = 'grx-scan-v5';
+const CACHE = 'grx-scan-v6';
 const FILES = [
   './', './index.html', './css/style.css', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/ncpo-logo.png',
   './js/app.js', './js/file-warning.js', './js/core/ocr-browser.js', './js/core/pipeline.js', './js/core/image.js', './js/core/layout.js', './js/core/text.js',
-  './js/core/formats.js', './js/core/quad.js', './js/core/refine.js', './js/core/status.js', './js/core/validate.js', './js/core/output.js',
+  './js/core/formats.js', './js/core/quad.js', './js/core/refine.js', './js/core/status.js', './js/core/validate.js', './js/core/output.js', './js/core/table.js', './js/core/cellocr.js',
   './js/extractors/registry.js', './js/extractors/base.js', './js/extractors/license.js', './js/extractors/cr.js',
   './vendor/tesseract/tesseract.min.js', './vendor/tesseract/worker.min.js',
   './vendor/core/tesseract-core-simd-lstm.wasm.js', './vendor/core/tesseract-core-lstm.wasm.js',

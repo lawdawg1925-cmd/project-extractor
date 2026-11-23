@@ -181,7 +181,7 @@ def lic_expected(p):
 
 def cr_expected(p, cropped=False):
     e = {"cr_no": p["cr_no"], "date_registered": p["date"], "mv_file_no": p["mv_file_no"], "plate_no": p["plate_no"],
-         "engine_no": p["engine_no"], "chassis_no": p["chassis_no"], "vin": None, "vehicle_type": p["denomination"],
+         "engine_no": p["engine_no"], "chassis_no": p["chassis_no"], "vin": None, "denomination": p["denomination"],
          "piston_displacement": p["piston"], "cylinders": p["cyl"], "fuel": p["fuel"], "make": p["make"], "series": p["series"],
          "body_type": p["body_type"], "year_model": p["year"], "gross_wt": p["gross"], "net_wt": p["net"],
          "net_capacity": p["capacity"], "color": p["color"], "classification": p["classification"],
