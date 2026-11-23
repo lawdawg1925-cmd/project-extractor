@@ -298,9 +298,20 @@ export function analyzeTable(img) {
   const thick = Math.max(3, Math.round(long * 0.006));
   // gaps of a few px are bridged (stamp ink or a fold crossing a rule)
   const gap = Math.max(3, Math.round(long * 0.0025));
-  const H = longRuns(dm, w, h, minLen, gap, 'h', thick), V = longRuns(dm, w, h, minLen, gap, 'v', thick);
+  const H = longRuns(dm, w, h, minLen, gap, 'h', thick);
+  // column rules are only one row high when a blurry photo breaks them at every crossing: accept
+  // vertical rules down to ~70% of the row height (the spacing of the long horizontal rules)
+  let lenV = minLen;
+  {
+    const ys = components(H, w, h, minLen).filter((c) => c.x1 - c.x0 > w * 0.3).map((c) => (c.y0 + c.y1) / 2).sort((a, b) => a - b);
+    const d = []; for (let i = 1; i < ys.length; i++) if (ys[i] - ys[i - 1] > thick * 2) d.push(ys[i] - ys[i - 1]);
+    d.sort((a, b) => a - b);
+    if (d.length >= 3 && !globalThis.GRX_NO_LENV) lenV = Math.round(Math.max(long * 0.02, Math.min(minLen, d[Math.floor(d.length / 2)] * 0.7)));
+  }
+  const V = longRuns(dm, w, h, lenV, gap, 'v', thick);
   const both = new Uint8Array(w * h);
   for (let i = 0; i < w * h; i++) both[i] = H[i] | V[i];
+  if (globalThis.GRX_DEBUG_TABLE) globalThis.GRX_DEBUG_TABLE({ H, V, dm, w, h, lenV, thick, gap, minLen });
   const m = dilate(both, w, h, 1);
   const erased = { width: w, height: h, data: new Uint8ClampedArray(img.data) };
   for (let i = 0; i < w * h; i++) if (m[i]) { erased.data[i * 4] = erased.data[i * 4 + 1] = erased.data[i * 4 + 2] = 255; }
@@ -316,6 +327,35 @@ export function analyzeTable(img) {
     const yl = endY((x) => x <= c.x0 + 6), yr = endY((x) => x >= c.x1 - 6);
     const draw = (xa, xb, y) => { if (y == null) return; for (let yy = Math.max(0, y - wr); yy <= Math.min(h - 1, y + wr); yy++) for (let x = xa; x <= xb; x++) walls[yy * w + x] = 1; };
     draw(0, c.x0, yl); draw(c.x1, w - 1, yr);
+  }
+  // rules stop short of a crossing on a blurry photo (the crossing looks too thick to be a rule), which
+  // leaves a gap there that joins neighbouring boxes: extend each rule end a little along its own line
+  if (!globalThis.GRX_NO_EXT) {
+    const ext = Math.max(3 * wr, Math.round(long * 0.012));
+    const vComps0 = components(dilate(V, w, h, 1), w, h, lenV);
+    const endAt = (c, pick, coord) => { let s = 0, n = 0; for (const p of c.pixels) { const x = p % w, y = (p / w) | 0; if (pick(x, y)) { s += coord(x, y); n++; } } return n ? Math.round(s / n) : null; };
+    for (const c of hComps) {
+      const yl = endAt(c, (x) => x <= c.x0 + 6, (x, y) => y), yr = endAt(c, (x) => x >= c.x1 - 6, (x, y) => y);
+      for (const [xa, xb, y] of [[c.x0 - ext, c.x0, yl], [c.x1, c.x1 + ext, yr]]) {
+        if (y == null) continue;
+        for (let yy = Math.max(0, y - wr); yy <= Math.min(h - 1, y + wr); yy++) for (let x = Math.max(0, xa); x <= Math.min(w - 1, xb); x++) walls[yy * w + x] = 1;
+      }
+    }
+    for (const c of vComps0) {
+      if ((c.x1 - c.x0) > (c.y1 - c.y0) * 0.5) continue;
+      const xt = endAt(c, (x, y) => y <= c.y0 + 6, (x) => x), xb2 = endAt(c, (x, y) => y >= c.y1 - 6, (x) => x);
+      for (const [ya, yb, x] of [[c.y0 - ext, c.y0, xt], [c.y1, c.y1 + ext, xb2]]) {
+        if (x == null) continue;
+        for (let y = Math.max(0, ya); y <= Math.min(h - 1, yb); y++) for (let xx = Math.max(0, x - wr); xx <= Math.min(w - 1, x + wr); xx++) walls[y * w + xx] = 1;
+      }
+    }
+  }
+  // the straightened image is cut along the table's outer rules: on a blurry photo those border rules
+  // are often too faint or partly cut off, so the image edge itself closes the outer boxes
+  if (globalThis.GRX_NO_BORDER !== true) {
+    const bw = Math.max(2, wr >> 1);
+    for (let y = 0; y < h; y++) for (let k = 0; k < bw; k++) { walls[y * w + k] = 1; walls[y * w + w - 1 - k] = 1; }
+    for (let x = 0; x < w; x++) for (let k = 0; k < bw; k++) { walls[k * w + x] = 1; walls[(h - 1 - k) * w + x] = 1; }
   }
   const cellMap = new Int32Array(w * h).fill(-1), stack = new Int32Array(w * h);
   const cells = [];

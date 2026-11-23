@@ -10,6 +10,7 @@ import { keywordScore, makeField, runExtractor } from './base.js';
 import * as F from '../core/formats.js';
 import { STATUS } from '../core/status.js';
 import { normToken, levenshtein, cleanValue } from '../core/text.js';
+import { findLabel } from '../core/layout.js';
 
 const NOW = new Date().getFullYear();
 const MV_RE = /\b\d{4}\s?-\s?\d{11}\b/;
@@ -311,10 +312,120 @@ function gridRescue(f, ocr) {
   }
 }
 
+
+// Both CR layouts are fixed printed grids. On a blurry / low-resolution photo the small labels are often
+// unreadable while the large values still are: then the ruled boxes found on the photo are matched to
+// the printed layout (rows of boxes at known positions across the table) and each value is taken from
+// its box by position. Accepted only when the boxes line up with the layout AND several boxes hold the
+// kind of value the layout puts there (fuel type, year, MV file no., …). Such values are always VERIFY.
+const TEMPLATES = {
+  new: [
+    [['plate_no', 0, 0.25], ['engine_no', 0.25, 0.5], ['chassis_no', 0.5, 0.75], ['vin', 0.75, 1]],
+    [['mv_file_no', 0, 0.25], ['vehicle_type', 0.25, 0.5], ['vehicle_category', 0.5, 0.75], ['make', 0.75, 1]],
+    [['passenger_capacity', 0, 0.25], ['color', 0.25, 0.5], ['fuel', 0.5, 0.75], ['classification', 0.75, 1]],
+    [['body_type', 0, 0.25], ['series', 0.25, 0.5], ['gross_wt', 0.5, 0.75], ['net_wt', 0.75, 1]],
+    [['year_model', 0, 0.25], ['year_rebuilt', 0.25, 0.5], ['piston_displacement', 0.5, 0.75], ['max_power', 0.75, 1]],
+    [['owner_name', 0, 1]],
+    [['owner_address', 0, 1]],
+    [['encumbered_to', 0, 1]],
+    [[null, 0, 0.25], ['or_no', 0.25, 0.5], ['or_date', 0.5, 0.75], ['amount', 0.75, 1]],
+  ],
+  old: [
+    [['mv_file_no', 0.01, 0.245], ['plate_no', 0.245, 0.485], ['engine_no', 0.485, 0.73], ['chassis_no', 0.73, 0.99]],
+    [['denomination', 0.01, 0.245], ['piston_displacement', 0.245, 0.485], ['cylinders', 0.485, 0.73], ['fuel', 0.73, 0.99]],
+    [['make', 0.01, 0.245], ['series', 0.245, 0.485], ['body_type', 0.485, 0.73], ['body_no', 0.73, 0.84], ['year_model', 0.84, 0.99]],
+    [['gross_wt', 0.01, 0.245], ['net_wt', 0.245, 0.485], ['shipping_wt', 0.485, 0.73], ['net_capacity', 0.73, 0.99]],
+    [['owner_name', 0.01, 0.48], ['telephone', 0.48, 0.99]],
+    [['owner_address', 0.01, 0.99]],
+    [['encumbered_to', 0.01, 0.99]],
+    [[null, 0.01, 0.245], ['or_no', 0.245, 0.485], ['or_date', 0.485, 0.73], ['amount', 0.73, 0.99]],
+  ],
+};
+// boxes whose value has a recognisable kind: used to confirm the match (not just box shapes)
+const TYPED = {
+  mv_file_no: (v) => /^\d{4}-\d{11}$/.test(v), fuel: (v) => FUELS.includes(v), classification: (v) => CLASSES.includes(v),
+  year_model: (v) => /^(19[5-9]\d|20[0-4]\d)$/.test(v), body_type: (v) => BODY_TYPES.includes(v), vehicle_type: (v) => VEHICLE_TYPES.includes(v),
+  vehicle_category: (v) => /^[LMNO][1-7][A-Z]?$/.test(v), or_date: (v) => /\d{4}/.test(v), denomination: (v) => DENOMS.some((d) => d.endsWith(v)),
+  amount: (v) => /\d\.\d\d$/.test(v), chassis_no: (v) => v.replace(/[^A-Z0-9]/g, '').length === 17,
+};
+
+/** Match the analysed boxes (ocr.cells, image px) to a printed layout → { layout, slots: Map(key → cell), typed, score } or null. */
+export function matchLayout(ocr, onlyLayout = null) {
+  const cells = ocr.cells, W = ocr.tableWidth;
+  if (!cells || cells.length < 8 || !W) return null;
+  const geo = cellGeometry(ocr), ignored = new Set(ignoreWords(ocr));
+  const hts = cells.map((c) => c.y1 - c.y0).sort((a, b) => a - b), medH = hts[hts.length >> 1];
+  const rows = [];
+  for (const c of cells.filter((c) => c.y1 - c.y0 < medH * 1.8).sort((a, b) => (a.y0 + a.y1) - (b.y0 + b.y1))) {
+    const cy = (c.y0 + c.y1) / 2, r = rows.find((r) => Math.abs(r.cy - cy) < medH * 0.45);
+    if (r) { r.cells.push(c); r.cy = (r.cy * (r.cells.length - 1) + cy) / r.cells.length; } else rows.push({ cy, cells: [c] });
+  }
+  rows.sort((a, b) => a.cy - b.cy);
+  const d = []; for (let i = 1; i < rows.length; i++) d.push(rows[i].cy - rows[i - 1].cy);
+  d.sort((a, b) => a - b);
+  const pitch = d.length ? d[d.length >> 1] : medH;
+  // labels that were read tell which box is which: they must agree with the layout
+  const labelled = new Map();
+  for (const def of fields) for (const l of def.labels || []) for (const h of findLabel(ocr, typeof l === 'string' ? l : l.label, typeof l === 'string' ? (def.labelOpts || {}) : (l.opts || {}))) {
+    if (h.dist === 0 && normToken(typeof l === 'string' ? l : l.label).length >= 6 && h.words[0].cell !== undefined) labelled.set(h.words[0].cell, def.key);
+  }
+  let best = null;
+  for (const [layout, T] of Object.entries(TEMPLATES)) {
+    if (onlyLayout && layout !== onlyLayout) continue;
+    for (let k = 0; k < Math.min(4, rows.length); k++) {
+      const slots = new Map(); let total = 0, matched = 0, typed = 0, contra = 0;
+      T.forEach((trow, r) => {
+        const y = rows[k].cy + r * pitch;
+        const row = rows.find((rw) => Math.abs(rw.cy - y) < pitch * 0.4);
+        for (const [key, a, b] of trow) {
+          total++;
+          if (!row) continue;
+          const c = row.cells.find((c) => { const x0 = c.x0 / W, x1 = c.x1 / W, ov = Math.min(x1, b) - Math.max(x0, a); return ov / Math.max(x1 - x0, b - a) >= 0.6; });
+          if (!c) continue;
+          matched++;
+          if (labelled.has(c.id)) { if (labelled.get(c.id) === key) typed++; else contra++; }
+          if (!key) continue;
+          slots.set(key, c);
+          const g = geo.get(c.id), def = fields.find((x) => x.key === key);
+          if (g && TYPED[key]) { const v = boxValue(g, ignored, def); const fm = v && v.text ? def.format(v.text) : null; if (fm && fm.ok && TYPED[key](fm.value)) typed++; }
+        }
+      });
+      const score = matched / total + typed * 0.1 - contra * 0.3;
+      if (matched / total >= 0.55 && typed >= 3 && contra <= 1 && (!best || score > best.score)) best = { layout, slots, typed, score, matched, total };
+    }
+  }
+  return best;
+}
+
+function templateRescue(f, ocr, layout) {
+  const m = matchLayout(ocr, layout);
+  if (!m) return null;
+  const geo = cellGeometry(ocr), ignored = new Set(ignoreWords(ocr));
+  const usedCells = new Set(Object.values(f).map((x) => x && x._geo && x._geo.cell).filter((c) => c !== undefined && !Number.isNaN(c)));
+  for (const [key, c] of m.slots) {
+    const fl = f[key];
+    if (!fl || !labelMissing(fl) || usedCells.has(c.id)) continue;
+    const g = geo.get(c.id); if (!g) continue;
+    const def = fields.find((d) => d.key === key);
+    const v = boxValue(g, ignored, def);
+    if (!v || !v.text) continue;
+    const fm = def.format(v.text);
+    if (!fm.ok) continue;
+    // a garbled low-confidence line is not offered as a value (unless it has the expected kind)
+    if ((v.conf ?? 0) < 30 && !(TYPED[key] && TYPED[key](fm.value))) continue;
+    f[key] = makeField(def, { value: fm.value, raw: v.text, status: STATUS.VERIFY, confidence: v.conf,
+      note: 'Label not readable: value taken from its box position on the CR layout — check it.' });
+    Object.defineProperty(f[key], '_geo', { value: { cell: c.id, value: { x0: g.x0, y0: g.y0, x1: g.x1, y1: g.y1 } }, enumerable: false });
+    usedCells.add(c.id);
+  }
+  return m.layout;
+}
+
 function postProcess(f, ocr) {
   if (f.owner_address.status === STATUS.NOT_FOUND && f.owner_name.value) addressFromBox(f, ocr);
-  const layout = layoutOf(ocr.text);
+  let layout = layoutOf(ocr.text);
   if (layout === 'new') gridRescue(f, ocr);
+  if (ocr.cells) { const l = templateRescue(f, ocr, layout); if (!layout && l) layout = l; }
   for (const d of fields) {
     // a field the detected layout does not print: hide it (not a missing field)
     if (layout && d.forms && !d.forms.includes(layout) && f[d.key].status === STATUS.NOT_FOUND) {
@@ -362,4 +473,5 @@ export default {
     return l ? [{ level: 'info', text: l === 'new' ? 'New CR layout (LTO Form No. 3, revised Dec. 2020).' : 'Old CR layout (LTO Form No. 3).' }] : [];
   },
   extract(ocr) { return runExtractor(this, ocr); },
+  matchTable(ocr) { return matchLayout(ocr); },
 };

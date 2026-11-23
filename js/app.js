@@ -1,6 +1,6 @@
 // GRX Scan — UI controller. All processing happens in this browser tab.
 import { extractDocument } from './core/pipeline.js';
-import { rotate90, crop as cropImg } from './core/image.js';
+import { rotate90, crop as cropImg, photoQuality } from './core/image.js';
 import { isFullImage } from './core/quad.js';
 import { detectOutline } from './core/table.js';
 import { toText, toCSV, toJSON, fieldText } from './core/output.js';
@@ -69,6 +69,26 @@ function detectCorners() {
     else state.corners = [{ x: 0, y: 0 }, { x: img.width - 1, y: 0 }, { x: img.width - 1, y: img.height - 1 }, { x: 0, y: img.height - 1 }];
   }
   drawQuad();
+  showQualityHint();
+}
+// Photo check before reading (cheap phone cameras): too dark or too small → suggest a retake.
+// Only a hint: the user can still extract.
+function showQualityHint() {
+  const el = $('qualityHint'), img = state.working;
+  if (!el) return;
+  const tips = [];
+  if (img) {
+    try {
+      const q = photoQuality(img);
+      const c = state.corners, d = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+      const docLong = c ? Math.max(d(c[0], c[1]), d(c[3], c[2]), d(c[0], c[3]), d(c[1], c[2])) : q.long;
+      if (q.paper < 140) tips.push('The photo looks dark — use more light or the flash (avoid glare on the card).');
+      if (docLong < 1000) tips.push(`The document is small in the photo (about ${Math.round(docLong)} px) — move the phone closer so it fills the frame.`);
+      if (q.noise > 6) tips.push('The photo is grainy — use more light and hold the phone still.');
+    } catch (e) { console.warn(e); }
+  }
+  el.textContent = tips.length ? `Photo check: ${tips.join(' ')} You can still extract, but a retake will read more fields.` : '';
+  el.classList.toggle('hidden', !tips.length);
 }
 function quadStatusText() {
   if (!state.corners) return '';

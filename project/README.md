@@ -11,6 +11,15 @@ puts the information into the right fields → you check/correct → **Copy All*
 > 🔒 **Everything happens on your own device.** The photo is never uploaded, nothing is saved,
 > and it works **without internet**. Press **Clear / Delete** when done.
 
+### New: better reading of photos from low-end phone cameras (cache grx-scan-v7)
+- **Dim, soft or low-resolution photos** are cleaned up on the phone before reading (enlarged, noise removed, lighting
+  evened out, letters sharpened). Sharp photos are read exactly as before.
+- **CR boxes are found even when the ruled lines are faint or broken**, and when the small printed labels are too blurry
+  to read, the CR is recognised by its **box layout**; values taken by position are always marked **[VERIFY]**.
+- **Photo check:** after choosing a photo, a yellow note warns if it is too dark or the document is too small, with a
+  retake tip (you can still extract).
+- Several readings of a poor photo are combined field by field; readings that disagree stay [VERIFY].
+
 ### New: CR reader rebuilt (box-by-box, both CR layouts)
 - **Both CR layouts:** the old *LTO Form No. 3* and the new *Form No. 3 (Revised December 2020)* — the layout is detected
   and fields that are not printed on that layout are hidden.
@@ -104,6 +113,8 @@ The same files can be put on any HTTPS static host (for example a unit-controlle
 - Android: clean the lens; use the normal 1× lens (not ultra-wide); avoid "beauty"/portrait modes. iPhone: avoid Live Photo blur.
 - Sideways or upside-down photos are fine (auto-rotated) but straight is faster. Use **✂ Crop** to cut away background.
 - If you see "blurry/low-contrast" or many orange fields → retake rather than typing everything.
+- **Low-end phones:** go near a window or turn on the room light (flash only if there is no glare), fill the frame with the
+  document, tap to focus and hold still for a second. A closer, sharper photo helps far more than a higher megapixel setting.
 
 ## E. For developers / IT
 
@@ -115,6 +126,9 @@ node tests/quad-tests.mjs        # document edge detection + perspective tests (
 python3 samples/generate_samples.py && python3 samples/generate_samples_hard.py   # regenerate synthetic samples (hard = perspective, clutter, glare, low light, old CR, 10-year license)
 node tests/live-check.mjs https://lawdawg1925-cmd.github.io/project-extractor/ samples/license_perspective_glare_clutter.jpg   # check the live site
 node tests/debug-ocr.mjs samples/cr_clean.png   # see OCR words + positions
+node tests/lowend-tests.mjs      # photo check / restoration / broken-rule boxes / CR box-layout fallback (synthetic)
+python3 tests/degrade.py /tmp/deg samples/*.png samples/*.jpg     # simulate low-end cameras (lowA..lowD)
+node tests/bench.mjs samples/expected.json samples /tmp/deg /tmp/out.json && python3 tests/bench-report.py /tmp/out.json --fields
 ```
 Architecture, how fields are mapped, how to add a new document type (OR, citation ticket…), privacy design,
 limitations and roadmap: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.

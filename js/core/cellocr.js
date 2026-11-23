@@ -73,11 +73,15 @@ export async function readCells(img, pageOcr, recognize, { onProgress = () => {}
     const bins = {};
     for (let k = 0; k < passes.length; k++) {
       const { level, psm } = passes[k];
-      const s = 2, pad = 16;
+      const s = globalThis.GRX_CELL_SCALE || 2, pad = 16;
       if (!bins[level]) {
         const thr = dark + level * (paper - dark);
         const b = { width: im.width, height: im.height, data: new Uint8ClampedArray(im.data) };
-        for (let i = 0; i < b.data.length; i += 4) { const g = b.data[i] > thr ? 255 : 0; b.data[i] = b.data[i + 1] = b.data[i + 2] = g; }
+        if (level === 'gray') {
+          // soft letters (blurry photo): keep the gray levels, stretched from ink to paper — a hard
+          // threshold would break thin blurred strokes apart
+          for (let i = 0; i < b.data.length; i += 4) { const g = Math.max(0, Math.min(255, (b.data[i] - dark) * 255 / Math.max(1, paper - dark))); b.data[i] = b.data[i + 1] = b.data[i + 2] = g; }
+        } else for (let i = 0; i < b.data.length; i += 4) { const g = b.data[i] > thr ? 255 : 0; b.data[i] = b.data[i + 1] = b.data[i + 2] = g; }
         const big = resize(b, b.width * s, b.height * s);
         const padded = { width: big.width + 2 * pad, height: big.height + 2 * pad, data: new Uint8ClampedArray((big.width + 2 * pad) * (big.height + 2 * pad) * 4).fill(255) };
         for (let y = 0; y < big.height; y++) padded.data.set(big.data.subarray(y * big.width * 4, (y + 1) * big.width * 4), ((y + pad) * padded.width + pad) * 4);

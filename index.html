@@ -36,7 +36,7 @@
         <input id="inFile" type="file" accept="image/*" hidden>
       </label>
     </div>
-    <p class="hint" id="dropHint">Tip: place the document flat on a dark surface, good light, no glare, fill the frame. You can also drag &amp; drop an image here.</p>
+    <p class="hint" id="dropHint">Tip: place the document flat on a dark surface, good light (daylight or flash), no glare, fill the frame, tap the screen to focus and hold still. You can also drag &amp; drop an image here.</p>
     <div id="previewWrap" class="preview hidden">
       <div class="canvas-box"><canvas id="preview"></canvas><svg id="quadSvg" class="quad-svg hidden"><polygon id="quadPoly"></polygon></svg><div id="cropBox" class="crop-box hidden"></div></div>
       <label class="check" id="straightenRow"><input type="checkbox" id="chkStraighten" checked> Auto-straighten document <span class="hint" id="quadStatus"></span></label>
@@ -47,6 +47,7 @@
         <button class="btn hidden" id="btnCropApply" type="button">✔ Apply crop</button>
         <button class="btn hidden" id="btnCropReset" type="button">↺ Undo crop</button>
       </div>
+      <p class="quality-hint hidden" id="qualityHint" role="status"></p>
       <p class="hint" id="quadHint">The yellow outline marks the document edges. If it is off, drag the round corner handles onto the card corners (optional).</p>
       <p class="hint" id="cropHint" hidden>Drag a box around the document, then tap “Apply crop”.</p>
     </div>

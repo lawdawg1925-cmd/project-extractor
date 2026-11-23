@@ -58,6 +58,13 @@ function cutSignature(v) {
 }
 
 function postProcess(f, ocr) {
+  // the next row's label ("License No.") misread and glued to the end of a multi-line address
+  if (f.address && f.address.value) {
+    const cut = String(f.address.value).replace(/[\s,]+[A-Z0-9]{0,2}C[EF]N[S5]E\s*N[O0]\b.*$/i, '');
+    if (cut !== f.address.value && cut.length >= 8) {
+      Object.assign(f.address, { value: cut, status: STATUS.VERIFY, note: [f.address.note, 'A misread label was removed from the end of the address — check it.'].filter(Boolean).join(' ') });
+    }
+  }
   // Name split: printed as "LAST, FIRST MIDDLE"
   const name = f.full_name;
   const inherit = (key, value, extraNote = '', forceVerify = false) => {

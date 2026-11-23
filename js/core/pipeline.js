@@ -1,6 +1,6 @@
 // The full extraction pipeline, independent of browser/Node:
 // preprocess → OCR (with rotation retry) → detect document type → map fields → validate.
-import { preprocess, rotate90, crop } from './image.js';
+import { preprocess, rotate90, crop, restorePhoto, docQuality } from './image.js';
 import { normalizeOcr, horizontalRatio } from './layout.js';
 import { warpQuad, isFullImage } from './quad.js';
 import { detectOutline } from './table.js';
@@ -32,9 +32,19 @@ export async function extractDocument(image, { recognize, docType = 'auto', onPr
   // a ruled table (CR) was found and straightened: read it larger and ignore yellow stamp ink
   const tableLock = straightened && outlineMethod === 'table' && docType !== 'license';
   const attempts = [];
+  const restoredCache = new Map();
+  const restoredOf = (src, rot) => {
+    const key = `${rot}|${src.width}x${src.height}`;
+    if (!restoredCache.has(key)) restoredCache.set(key, restorePhoto(src));
+    return restoredCache.get(key);
+  };
   const run = async (rot, mode, label) => {
     onProgress({ stage: 'ocr', text: label });
-    const img = preprocess(rot ? rotate90(image, rot) : image, { mode, stampFree: tableLock, target: tableLock ? 2600 : 2000 });
+    // 'restored': a dim / blurry / low-resolution photo (cheap phone camera) is cleaned first —
+    // upscaled, denoised, lighting evened out and sharpened — then read like a normal photo
+    let src = rot ? rotate90(image, rot) : image;
+    if (mode === 'restored') src = restoredOf(src, rot);
+    const img = preprocess(src, { mode: mode === 'restored' ? 'standard' : mode, stampFree: tableLock, target: tableLock ? 2600 : 2000 });
     const data = await recognize(img);
     const ocr = normalizeOcr(data);
     const det = registry.detect(ocr.text);
@@ -50,8 +60,15 @@ export async function extractDocument(image, { recognize, docType = 'auto', onPr
   const good = (a) => a.upright >= 0.6 && a.ocr.meanConf >= 75 && (docType === 'auto' ? a.det[0].score : a.det.find((d) => d.id === docType).score) >= 0.35;
 
   let best = await run(0, 'standard', 'Reading text…');
+  const dq = docQuality(image);
+  if (!good(best) && dq.low && !globalThis.GRX_NO_RESTORE) {
+    const a = await run(0, 'restored', 'Cleaning up a dim or blurry photo…');
+    if (a.quality > best.quality) best = a;
+  }
   if (!good(best)) {
-    for (const rot of [1, 3, 2]) {
+    // words already lie horizontally (upright or upside down): only the 180° turn is worth a try
+    const rots = best.upright >= 0.8 && best.ocr.words.length >= 20 ? [2] : [1, 3, 2];
+    for (const rot of rots) {
       const a = await run(rot, 'standard', `Trying rotation ${rot * 90}°…`);
       if (a.quality > best.quality) best = a;
       if (good(best)) break;
@@ -90,17 +107,28 @@ export async function extractDocument(image, { recognize, docType = 'auto', onPr
   if (docType === 'auto') id = det[0].score >= registry.MIN_DETECT_SCORE ? det[0].id : 'unknown';
   // a ruled table was locked but the page read is too poor to name the document: read the boxes and
   // decide from their text (only a ruled-form extractor can use them)
-  let preCells = null;
+  // soft / low-resolution photo: the second box reading keeps the gray levels instead of a hard
+  // black/white threshold (which breaks blurred letters apart)
+  const cellPasses = dq.low && !globalThis.GRX_NO_GRAYCELL ? [{ level: 0.35, psm: '11' }, { level: 'gray', psm: '6' }] : undefined;
+  let preCells = null, byLayout = false;
+  const withCells = (o, cr, img) => { o.cells = cr.cells; o.tableWidth = img.width; return o; };
   if (id === 'unknown' && tableLock) {
     try {
-      const cr = await readCells(best.img, best.ocr, recognize, { onProgress });
+      const cr = await readCells(best.img, best.ocr, recognize, { onProgress, passes: cellPasses });
       if (cr) {
         const d2 = registry.detect(cr.datas.map((d) => d.text || '').join('\n'));
         if (d2[0].score >= registry.MIN_DETECT_SCORE && registry.get(d2[0].id).useGrid) { id = d2[0].id; preCells = cr; }
+        else {
+          // labels unreadable (blurry / low-resolution photo): recognise the form by its printed box layout
+          for (const ex of registry.list()) {
+            if (!ex.useGrid || !ex.matchTable) continue;
+            if (cr.datas.some((d) => ex.matchTable(withCells(normalizeOcr(d), cr, best.img)))) { id = ex.id; preCells = cr; byLayout = true; break; }
+          }
+        }
       }
     } catch (e) { console.warn('box reading failed', e); }
   }
-  const base = { detection: det, rawText: best.ocr.text, meanConf: Math.round(best.ocr.meanConf), rotation: best.rot * 90, mode: best.mode,
+  const base = { photo: { dim: dq.dim, small: dq.small, blurry: dq.blurry }, detection: det, rawText: best.ocr.text, meanConf: Math.round(best.ocr.meanConf), rotation: best.rot * 90, mode: best.mode,
     attempts: attempts.length, ms: Date.now() - t0, processedImage: best.img, straightened };
   if (id === 'unknown') {
     return { ...base, docType: 'unknown', docLabel: 'Unknown / unsupported document', fields: [],
@@ -112,15 +140,22 @@ export async function extractDocument(image, { recognize, docType = 'auto', onPr
   let ocrIn = best.ocr, boxes = 0, fields = null, cellList = null;
   if (ex.useGrid && tableLock) {
     try {
-      const cr = preCells || await readCells(best.img, best.ocr, recognize, { onProgress });
+      const cr = preCells || await readCells(best.img, best.ocr, recognize, { onProgress, passes: cellPasses });
       if (cr) {
-        const reads = cr.datas.map((d) => ex.extract(normalizeOcr(d)).fields);
+        const reads = cr.datas.map((d) => ex.extract(withCells(normalizeOcr(d), cr, best.img)).fields);
         fields = mergeReads(reads, { fallback: ex.extract(best.ocr).fields });
         ocrIn = normalizeOcr(cr.datas[0]); boxes = cr.cells.length; cellList = cr.cells;
       }
     } catch (e) { console.warn('box reading failed', e); fields = null; }
   }
-  if (!fields) fields = ex.extract(ocrIn).fields;
+  if (!fields) {
+    // several readings of the same photo (normal / cleaned-up / high-contrast) see different fields
+    // on a poor photo: combine them field by field (readings that disagree are marked VERIFY)
+    const same = attempts.filter((a) => a !== best && a.rot === best.rot && a.upright >= 0.6 && a.img.width === best.img.width && a.img.height === best.img.height &&
+      (a.det.find((d) => d.id === id) || { score: 0 }).score > 0);
+    fields = ex.extract(ocrIn).fields;
+    if (same.length && ocrIn === best.ocr) fields = mergeReads(preferValid([fields, ...same.map((a) => ex.extract(a.ocr).fields)], ex.fields));
+  }
   onProgress({ stage: 'refine', text: 'Double-checking uncertain numbers…' });
   const refined = await refineFields(fields, ex.fields, best.img, recognize, { cells: cellList });
   if (ex.useGrid) { try { await refineCrNo(fields, ex.fields, best.img, { words: [...ocrIn.words, ...(ocrIn === best.ocr ? [] : best.ocr.words)] }, recognize); } catch (e) { console.warn('CR No. re-read failed', e); } }
@@ -137,8 +172,23 @@ export async function extractDocument(image, { recognize, docType = 'auto', onPr
   }
   result.messages = buildMessages(result, ex);
   if (result.mismatch) result.messages.unshift({ level: 'warn', text: result.mismatch });
+  if (byLayout) result.messages.unshift({ level: 'warn', text: 'The printed labels were too small or blurry to read, so the CR was recognised by its box layout. Check every field against the document.' });
   return result;
 }
+
+// Readings of the same field from several image variants: a value that fails the field's format check
+// ("J" for Sex) gives way to one that passes it ("M"); the merge then compares the remaining readings.
+function preferValid(reads, defs) {
+  const valid = (f) => { const d = defs.find((x) => x.key === f.key); try { return !!(f.value && d && d.format && d.format(f.value).ok); } catch { return false; } };
+  return reads.map((r) => r.map((f, i) => {
+    if (!f || !f.value || valid(f)) return f;
+    if (!reads.some((o) => o[i] && o[i] !== f && valid(o[i]))) return f;
+    const g = { ...f, value: '', status: STATUS_NF, note: 'Label not found on the image.' };
+    if (f._geo) Object.defineProperty(g, '_geo', { value: f._geo, enumerable: false });
+    return g;
+  }));
+}
+const STATUS_NF = 'NOT FOUND';
 
 // Extend the table outline upward (or downward) along its side edges, straighten that strip and read
 // only the fields printed outside the table. Values found there are always VERIFY.

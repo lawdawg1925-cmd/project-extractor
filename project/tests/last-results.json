@@ -14,7 +14,7 @@
     "silentErrors": 0,
     "missing": 0,
     "notFoundRespected": "2/2",
-    "sec": "1.9"
+    "sec": "2.0"
   },
   {
     "file": "license2_nonpro_clean.png",
@@ -31,7 +31,7 @@
     "silentErrors": 0,
     "missing": 0,
     "notFoundRespected": "1/1",
-    "sec": "1.7"
+    "sec": "1.8"
   },
   {
     "file": "license_rotated90.jpg",
@@ -48,7 +48,7 @@
     "silentErrors": 0,
     "missing": 0,
     "notFoundRespected": "2/2",
-    "sec": "3.2"
+    "sec": "3.3"
   },
   {
     "file": "license_photo_skew.jpg",
@@ -65,7 +65,7 @@
     "silentErrors": 0,
     "missing": 0,
     "notFoundRespected": "2/2",
-    "sec": "1.9"
+    "sec": "2.0"
   },
   {
     "file": "license_blurry_lowcontrast.jpg",
@@ -82,7 +82,7 @@
     "silentErrors": 0,
     "missing": 0,
     "notFoundRespected": "1/1",
-    "sec": "1.6"
+    "sec": "1.7"
   },
   {
     "file": "cr_clean.png",
@@ -99,7 +99,7 @@
     "silentErrors": 0,
     "missing": 0,
     "notFoundRespected": "1/1",
-    "sec": "8.4"
+    "sec": "8.9"
   },
   {
     "file": "cr2_motorcycle_clean.png",
@@ -133,7 +133,7 @@
     "silentErrors": 0,
     "missing": 0,
     "notFoundRespected": "1/1",
-    "sec": "9.3"
+    "sec": "9.2"
   },
   {
     "file": "cr_cropped_missing_owner.jpg",
@@ -144,13 +144,13 @@
     "mode": "standard",
     "conf": 89,
     "accuracy": "19/19 (100%)",
-    "okCorrect": 16,
-    "verifyCorrect": 3,
+    "okCorrect": 15,
+    "verifyCorrect": 4,
     "flaggedWrong": 0,
     "silentErrors": 0,
     "missing": 0,
     "notFoundRespected": "3/3",
-    "sec": "6.1"
+    "sec": "6.7"
   },
   {
     "file": "cr_rotated180_blurry.jpg",
@@ -167,7 +167,7 @@
     "silentErrors": 0,
     "missing": 1,
     "notFoundRespected": "1/1",
-    "sec": "6.7"
+    "sec": "3.6"
   },
   {
     "file": "license_ltonew_flat.png",
@@ -184,7 +184,7 @@
     "silentErrors": 0,
     "missing": 0,
     "notFoundRespected": "2/2",
-    "sec": "1.9"
+    "sec": "2.0"
   },
   {
     "file": "license_ltonew_handheld_tilt.jpg",
@@ -201,7 +201,7 @@
     "silentErrors": 0,
     "missing": 0,
     "notFoundRespected": "2/2",
-    "sec": "1.9"
+    "sec": "2.1"
   },
   {
     "file": "license10_clean.png",
@@ -218,7 +218,7 @@
     "silentErrors": 0,
     "missing": 0,
     "notFoundRespected": "2/2",
-    "sec": "1.8"
+    "sec": "2.0"
   },
   {
     "file": "cr_old_layout_clean.png",
@@ -235,7 +235,7 @@
     "silentErrors": 0,
     "missing": 0,
     "notFoundRespected": "1/1",
-    "sec": "1.8"
+    "sec": "2.0"
   },
   {
     "file": "license10_perspective_wood.jpg",
@@ -303,7 +303,7 @@
     "silentErrors": 0,
     "missing": 0,
     "notFoundRespected": "1/1",
-    "sec": "8.6"
+    "sec": "8.9"
   },
   {
     "file": "cr_old_perspective_clutter_lowlight.jpg",
@@ -311,16 +311,16 @@
     "detected": "cr",
     "typeOk": true,
     "rot": 0,
-    "mode": "standard",
-    "conf": 64,
-    "accuracy": "16/21 (76%)",
-    "okCorrect": 7,
-    "verifyCorrect": 9,
-    "flaggedWrong": 2,
+    "mode": "restored",
+    "conf": 73,
+    "accuracy": "17/21 (81%)",
+    "okCorrect": 10,
+    "verifyCorrect": 7,
+    "flaggedWrong": 1,
     "silentErrors": 0,
     "missing": 3,
     "notFoundRespected": "1/1",
-    "sec": "9.5"
+    "sec": "8.3"
   },
   {
     "file": "cr_new_layout_clean.png",
