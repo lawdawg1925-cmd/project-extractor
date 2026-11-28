@@ -24,6 +24,25 @@ function splitCodes(raw) {
     return w.length === 1 ? w[0].join(',') : tok;
   }).join('');
 }
+// "Q" without "U" after it hardly occurs in Philippine names; on the card it is usually the seal / hologram
+const qNotU = (v) => /Q(?!U)/.test(String(v).toUpperCase());
+// Expiration date in the embossed font, read from its box: the year must be 20xx (a leading 1 is a
+// misread 2), and a month that cannot exist is replaced by the birth month only when the day equals
+// the birth day and the month differs by one digit (licenses expire on the holder's birthday).
+function expiryPrep(s, fields) {
+  const m = String(s).replace(/\s+/g, '').match(/^([12])(\d{3})\/(\d{1,2})\/(\d{1,2})$/);
+  if (!m) return s;
+  const notes = [];
+  let y = m[1] + m[2], mo = m[3], d = m[4];
+  if (m[1] === '1') { y = '2' + m[2]; notes.push(`year read as ${m[1] + m[2]}`); }
+  const dob = (fields || []).find((x) => x.key === 'date_of_birth');
+  if (+mo > 12 && dob && dob.iso) {
+    const [bm, bd] = dob.iso.slice(5).split('-');
+    const a = mo.padStart(2, '0'), diff = [0, 1].filter((i) => a[i] !== bm[i]).length;
+    if (+d === +bd && diff === 1) { notes.push(`month read as ${mo}, taken as the birth month ${bm}`); mo = bm; }
+  }
+  return notes.length ? { text: `${y}/${mo}/${d}`, note: `Embossed date: ${notes.join('; ')}.` } : s;
+}
 const cardTemplate = {
   aspect: 0.63,
   anchors: {
@@ -44,22 +63,23 @@ const cardTemplate = {
   },
   // value boxes: offsets from the anchor (fractions of the card)
   zones: {
-    full_name: { anchor: 'full_name', x0: -0.02, x1: 0.46, y0: 0.015, y1: 0.075, whitelist: L1 + ",.-' ", minConf: 55, vote: true },
+    full_name: { anchor: 'full_name', x0: -0.02, x1: 0.46, y0: 0.015, y1: 0.075, whitelist: L1 + ",.-' ", minConf: 55, vote: true, suspect: qNotU },
     nationality: { anchor: 'nationality', x0: -0.015, x1: 0.085, y0: 0.015, y1: 0.072, whitelist: L1, format: (s) => (/^[A-Z]{3}$/.test(s.trim()) ? { ok: true, value: s.trim() } : { ok: false, value: s }) },
     sex: { anchor: 'sex', x0: -0.02, x1: 0.05, y0: 0.015, y1: 0.072 },
     date_of_birth: { anchor: 'date_of_birth', x0: -0.015, x1: 0.17, y0: 0.015, y1: 0.072, strict: true },
     weight: { anchor: 'weight', x0: 0, x1: 0.095, y0: 0.015, y1: 0.072, format: (s) => (/^\d{2,3}(\.\d)?$/.test(s.trim()) ? F.number(s, { decimals: true, min: 20, max: 250 }) : { ok: false, value: s }) },
     height: { anchor: 'height', x0: 0.012, x1: 0.09, y0: 0.015, y1: 0.072, format: (s) => (/^[12]\.\d{1,2}$/.test(s.trim()) ? F.number(s, { decimals: true, min: 0.9, max: 2.5 }) : { ok: false, value: s }) },
-    address: { anchor: 'address', x0: -0.015, x1: 0.56, y0: 0.015, y1: 0.125, psm: '6', whitelist: L1 + "0123456789 .,-#/'", minConf: 55, vote: true },
+    address: { anchor: 'address', x0: -0.015, x1: 0.56, y0: 0.015, y1: 0.125, psm: '6', whitelist: L1 + "0123456789 .,-#/'", minConf: 55, vote: true,
+      prep: (s) => String(s).replace(/\bGITY\b/g, 'CITY').replace(/\s+['"`\-.]+(?=\s|$)/g, '').replace(/(\w)['`]+(?=\s|$)/g, '$1') },
     license_no: { anchor: 'license_no', x0: -0.015, x1: 0.22, y0: 0.015, y1: 0.075, strict: true },
     // licenses expire on the holder's birthday: a single clear reading whose month/day matches the
     // birth date is accepted (VERIFY)
-    expiration_date: { anchor: 'expiration_date', x0: -0.02, x1: 0.17, y0: 0.015, y1: 0.075, strict: true,
+    expiration_date: { anchor: 'expiration_date', x0: -0.02, x1: 0.17, y0: 0.015, y1: 0.075, strict: true, prep: expiryPrep,
       confirm: (v, fl) => { const d = fl.find((x) => x.key === 'date_of_birth'); return !!(d && d.iso && v.iso && d.iso.slice(5) === v.iso.slice(5)); } },
     agency_code: { anchor: 'agency_code', x0: 0, x1: 0.11, y0: 0.015, y1: 0.075, strict: true },
     blood_type: { anchor: 'blood_type', x0: -0.01, x1: 0.10, y0: 0.015, y1: 0.072, strict: true },
-    eye_color: { anchor: 'eye_color', x0: -0.02, x1: 0.12, y0: 0.015, y1: 0.072, whitelist: L1 + ' ', format: (s) => { const v = s.trim().replace(/\s+/g, ' '); return EYES.test(v) ? { ok: true, value: v } : { ok: false, value: v }; } },
-    dl_codes: { anchor: 'dl_codes', x0: -0.045, x1: 0.15, y0: 0.015, y1: 0.072, strict: true, format: (s) => F.dlCodes(splitCodes(s)) },
+    eye_color: { anchor: 'eye_color', x0: -0.02, x1: 0.12, y0: 0.015, y1: 0.072, whitelist: L1 + ' ', strict: true, format: (s) => { const v = s.trim().replace(/\s+/g, ' '); return EYES.test(v) ? { ok: true, value: v } : { ok: false, value: v }; } },
+    dl_codes: { anchor: 'dl_codes', x0: -0.045, x1: 0.15, y0: 0.015, y1: 0.072, strict: true, format: (s) => { const r = F.dlCodes(splitCodes(s)); const c = String(r.value).split(/,\s*/); return r.ok && new Set(c).size !== c.length ? { ...r, ok: false } : r; } },
     conditions: { anchor: 'conditions', x0: -0.02, x1: 0.11, y0: 0.015, y1: 0.072 },
   },
 };

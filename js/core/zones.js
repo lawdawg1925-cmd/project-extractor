@@ -100,10 +100,16 @@ export async function readCardZones(fields, defs, template, img, ocrs, recognize
     const r = { x: m.ax * (a.x + z.x0) + m.bx, y: m.ay * (a.y + z.y0) + m.by, w: m.ax * (z.x1 - z.x0), h: m.ay * (z.y1 - z.y0) };
     if (r.x < -r.w * 0.2 || r.y < -r.h * 0.2 || r.x + r.w > img.width * 1.05 || r.y + r.h > img.height * 1.05) continue;
     const zdef = { ...def, refine: { whitelist: z.whitelist ?? (def.refine && def.refine.whitelist) }, format: (s) => {
-      const t = z.prep ? z.prep(s) : s; const fm = (z.format || def.format)(t); return fm; } };
+      // prep may repair the raw line using the rest of the card (returns a string, or { text, note })
+      const pr = z.prep ? z.prep(s, fields) : s, t = typeof pr === 'string' ? pr : pr.text;
+      const fm = (z.format || def.format)(t);
+      return pr.note && fm.ok ? { ...fm, fixed: true, note: [fm.note, pr.note].filter(Boolean).join(' ') } : fm; } };
     const reads = await readRegion(img, { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.w), h: Math.round(r.h) }, zdef, recognize, { psm: z.psm || '7', grayFlat: true });
     if (globalThis.GRX_DEBUG_ZONES) console.log('zone', key, reads.map((x) => `${x.name}:${x.text}(${Math.round(x.conf)})${x.fmt.ok ? '' : '✗'}`).join(' '));
-    const good = reads.filter((x) => x.fmt.ok && x.fmt.value);
+    let good = reads.filter((x) => x.fmt.ok && x.fmt.value);
+    // readings the field's own check finds implausible (e.g. a "Q" not followed by "U" in a Filipino
+    // name: usually a mark of the seal or hologram) are dropped when a plausible reading exists
+    if (z.suspect && good.some((x) => !z.suspect(x.fmt.value))) good = good.filter((x) => !z.suspect(x.fmt.value));
     if (!good.length) continue;
     // the value most variants agree on (then the most confident)
     const groups = new Map();
@@ -111,14 +117,15 @@ export async function readCardZones(fields, defs, template, img, ocrs, recognize
     let top = [...groups.values()].sort((p, q) => q.n - p.n || q.conf - p.conf)[0];
     // several words (name, address): vote word by word — a word counts as supported by every variant
     // that read it, so one bad letter in one variant does not sink the whole line
-    if (z.vote && top.n < 2 && good.length >= 2) {
+    if (z.vote && good.length >= 2 && (top.n < 2 || top.min < (z.minConf ?? 45))) {
       const v = voteWords(good);
-      if (v) { const fm = zdef.format(v.text); if (fm.ok) top = { v: fm, n: v.n, conf: v.conf, min: v.conf }; }
+      if (v && v.n >= top.n) { const fm = zdef.format(v.text); if (fm.ok) top = { v: fm, n: v.n, conf: v.conf, min: v.conf }; }
     }
     const rivals = [...groups.values()].filter((g) => String(g.v.value) !== String(top.v.value));
     // strong = most variants agree (strict formats: three agreeing variants are enough even at a low
     // Tesseract score), or one clear reading that a cross-check on the card confirms
     const strong = (top.n >= 2 && top.min >= (z.minConf ?? 45)) || (top.n >= 3 && z.strict && top.min >= 10) ||
+      (top.n >= 2 && z.strict && !rivals.length && top.conf >= 30) ||
       (top.conf >= 80 && !rivals.length) || (z.confirm && top.conf >= 60 && z.confirm(top.v, fields));
     if (!strong) continue;
     const before = f.value;
@@ -128,9 +135,13 @@ export async function readCardZones(fields, defs, template, img, ocrs, recognize
       if (sameVal(before, top.v.value)) continue;
       // an uncertain page reading is replaced only by a clearly better close reading
       // (or the page reading is the same line with some words missing)
-      const tb = String(before).toUpperCase().split(/\s+/).filter(Boolean), tv = String(top.v.value).toUpperCase().split(/\s+/);
+      const words = (x) => String(x).toUpperCase().split(/\s+/).filter((w) => /[A-Z0-9]/.test(w));
+      const tb = words(before), tv = words(top.v.value);
       const shorter = tb.length < tv.length && tb.every((w) => tv.includes(w));
-      if (!(top.n >= 2 && top.min >= 50 && (top.min > (f.confidence ?? 0) || shorter))) {
+      // the page reading fails a check the close reading passes (implausible letters, birthday rule)
+      const fixesPage = (z.suspect && z.suspect(before) && !z.suspect(top.v.value)) ||
+        (z.confirm && z.confirm(top.v, fields) && !z.confirm(def.format(before), fields));
+      if (!fixesPage && !(top.n >= 2 && top.min >= 50 && (top.min > (f.confidence ?? 0) || shorter))) {
         f.note = [f.note, `A close re-read of its place on the card gave "${top.v.value}" — check it.`].filter(Boolean).join(' ');
         continue;
       }

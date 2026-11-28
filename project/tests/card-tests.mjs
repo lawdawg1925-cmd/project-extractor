@@ -121,5 +121,40 @@ eq('wasm memory explained', explainEngineError('RuntimeError: memory access out 
 eq('empty error explained', /engine files could not be loaded/.test(explainEngineError(undefined)), true);
 eq('timeout kept', explainEngineError(new Error('The text-recognition engine stopped responding.')), 'The text-recognition engine stopped responding');
 
+// zone checks added for the newer card design (fictitious values)
+{
+  const Z = T.zones, D = license.fields;
+  const fz = (k, s, fields = []) => { const z = Z[k], d = D.find((x) => x.key === k); const pr = z.prep ? z.prep(s, fields) : s; return (z.format || d.format)(typeof pr === 'string' ? pr : pr.text); };
+  const dob = [{ key: 'date_of_birth', iso: '1990-08-14' }];
+  eq('embossed expiry: leading 1 read for 2', fz('expiration_date', '1032/08/14', dob).value, 'August 14, 2032');
+  eq('embossed expiry: impossible month = birth month (day matches, 1 digit off)', fz('expiration_date', '2032/18/14', dob).value, 'August 14, 2032');
+  eq('embossed expiry: impossible month kept invalid when the day differs', fz('expiration_date', '2032/18/15', dob).ok, false);
+  eq('embossed expiry: impossible month kept invalid without a birth date', fz('expiration_date', '2032/18/14', []).ok, false);
+  eq('embossed expiry: far-future year still rejected', fz('expiration_date', '1082/08/14', dob).ok, false);
+  const pr = Z.expiration_date.prep('1032/18/14', dob);
+  eq('embossed expiry: the repair is explained', /year read as 1032/.test(pr.note) && /birth month 08/.test(pr.note), true);
+  eq('DL codes: a code read twice is not accepted', fz('dl_codes', 'AA1,BBB2').ok, false);
+  eq('DL codes: run-together codes split', fz('dl_codes', 'AA1BB1,B2').value, 'A, A1, B, B1, B2');
+  eq('address: GITY read as CITY, stray quote dropped', fz('address', "LOT 5 MABINI ST SAN ROQUE' PASIG GITY").value, 'LOT 5 MABINI ST SAN ROQUE PASIG CITY');
+  eq('name: Q without U is suspect', Z.full_name.suspect('DELA CRUZ, JUAN SANTOSQ'), true);
+  eq('name: QU is fine', Z.full_name.suspect('QUIAMBAO, ANA REYES'), false);
+  eq('eye color counts as a strict (fixed-list) field', !!Z.eye_color.strict, true);
+}
+
+// the seal mark: two variants read a stray Q, one reads the name cleanly → the clean reading wins (VERIFY)
+{
+  const ocr = cardOcr({ ax: 1900, bx: 40, ay: 1197, by: 30 });
+  const fields = license.fields.map((d) => ({ key: d.key, value: '', status: STATUS.NOT_FOUND, hidden: d.section === 'extra' && false }));
+  const fn = fields.find((x) => x.key === 'full_name'); Object.assign(fn, { value: 'DELA CRUZ, JUAN SANTOSQ', status: STATUS.VERIFY, confidence: 60 });
+  fields.find((x) => x.key === 'date_of_birth').status = STATUS.OK;
+  let call = 0;
+  const reads = ['DELA CRUZ, JUAN SANTOS', 'DELA CRUZ, JUAN SANTOSQ', 'DELA CRUZ, JUAN SANTOSQ', 'DELA CRUZ, JUAN SANTOSQ'];
+  const recognize = async () => { const t = reads[call++ % reads.length]; return { text: t, confidence: 85, words: [], lines: [] }; };
+  const onlyName = { ...T, zones: { full_name: T.zones.full_name } };
+  await readCardZones(fields, license.fields, onlyName, { width: 2000, height: 1260, data: new Uint8ClampedArray(2000 * 1260 * 4).fill(200) }, [ocr], recognize);
+  eq('seal Q dropped from the name', fn.value, 'DELA CRUZ, JUAN SANTOS');
+  eq('seal Q fix is VERIFY', fn.status, STATUS.VERIFY);
+}
+
 console.log(`\nCard layout / photo loading tests: ${pass} passed, ${fail} failed`);
 process.exitCode = fail ? 1 : 0;

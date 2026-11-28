@@ -11,11 +11,14 @@ puts the information into the right fields → you check/correct → **Copy All*
 > 🔒 **Everything happens on your own device.** The photo is never uploaded, nothing is saved,
 > and it works **without internet**. Press **Clear / Delete** when done.
 
-### New: license fields by card position, Huawei / low-memory phone fixes, faster CR (cache grx-scan-v8)
+### New: license fields by card position, Huawei / low-memory phone fixes, faster CR (cache grx-scan-v9)
 - **License fields read by their place on the card.** On the busy card background (pattern, hologram, LTO seal) small
   labels are often lost. The labels that *were* read now locate the whole card layout, and each missing or doubtful value
   (Expiration Date, Agency Code, Eyes Color, DL Codes, Height, Address, Name…) is re-read from its printed position.
   Such values are always **[VERIFY]**, must pass the field's format check, and need agreeing readings.
+  The embossed Expiration Date is checked against the birthday rule (a license expires on the holder's birthday): an
+  impossible month such as "13" is only taken as the birth month when the day matches; the note says so. A stray "Q"
+  from the LTO seal next to the name (e.g. "SANTOSQ") is dropped when another reading shows the name without it.
 - **Signatory ignored on newer cards too:** "EDGAR C. GALVANTE / Assistant Secretary" (like "ATTY. VIGOR D. MENDOZA II") is never copied.
 - **Huawei / low-memory phones:** big camera photos (12–50 MP) are opened straight at a safe size (no crash or blank
   picture), the reading engine falls back to its plain build if the faster one fails, and every step has a time limit.

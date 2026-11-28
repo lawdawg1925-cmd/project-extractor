@@ -1,6 +1,6 @@
 // Service worker: caches ONLY the app's own files (code + OCR engine) so the tool opens offline.
 // It never caches photos or extracted data (those never touch the network at all).
-const CACHE = 'grx-scan-v8';
+const CACHE = 'grx-scan-v9';
 const FILES = [
   './', './index.html', './css/style.css', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/ncpo-logo.png',
   './js/app.js', './js/file-warning.js', './js/core/ocr-browser.js', './js/core/pipeline.js', './js/core/image.js', './js/core/layout.js', './js/core/text.js',
