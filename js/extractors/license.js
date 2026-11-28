@@ -7,6 +7,63 @@ import { normToken } from '../core/text.js';
 const NOW = new Date().getFullYear();
 const LICNO_RE = /\b[A-Z0-9]\d{2}\s?-\s?\d{2}\s?-\s?\d{6}\b/;
 
+// New LTO card (2017+ design, also the Dec 2020 / 2023 prints): where each printed label sits on the
+// card (x = left edge of the label, y = its centre, as fractions of the card width / height) and where
+// its value is printed relative to that label. Used only to re-read values the page reading missed;
+// such values are always VERIFY (see core/zones.js).
+const L1 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ\u00D1';
+const EYES = /^(BLACK|BROWN|DARK BROWN|LIGHT BROWN|BLUE|GRAY|GREY|GREEN|HAZEL|AMBER)$/;
+// DL codes printed "A,A1,B,B1,B2" with the small commas lost ("AA1,BB1,B2"): split a run of letters /
+// digits into valid codes only when there is exactly one way to do it
+const DLC = ['A', 'A1', 'B', 'B1', 'B2', 'BE', 'C', 'CE', 'D'];
+function splitCodes(raw) {
+  return String(raw).toUpperCase().split(/([,;.\s]+)/).map((tok) => {
+    if (!/^[A-E0-9]{2,}$/.test(tok) || DLC.includes(tok)) return tok;
+    const ways = (s) => { if (!s) return [[]]; const out = []; for (const c of DLC) if (s.startsWith(c)) for (const r of ways(s.slice(c.length))) out.push([c, ...r]); return out.slice(0, 2); };
+    const w = ways(tok);
+    return w.length === 1 ? w[0].join(',') : tok;
+  }).join('');
+}
+const cardTemplate = {
+  aspect: 0.63,
+  anchors: {
+    full_name: { x: 0.347, y: 0.292, labels: ['Last Name, First Name, Middle Name'], maxDist: 4 },
+    nationality: { x: 0.350, y: 0.400, labels: ['Nationality'], maxDist: 2 },
+    sex: { x: 0.484, y: 0.398, labels: ['Sex'], maxDist: 0 },
+    date_of_birth: { x: 0.552, y: 0.396, labels: ['Date of Birth'], maxDist: 2 },
+    weight: { x: 0.735, y: 0.393, labels: ['Weight (kg)'], maxDist: 2 },
+    height: { x: 0.858, y: 0.397, labels: ['Height(m)'], maxDist: 2 },
+    address: { x: 0.352, y: 0.496, labels: ['Address'], maxDist: 1 },
+    license_no: { x: 0.351, y: 0.636, labels: ['License No.'], maxDist: 2 },
+    expiration_date: { x: 0.585, y: 0.638, labels: ['Expiration Date'], maxDist: 3 },
+    agency_code: { x: 0.776, y: 0.640, labels: ['Agency Code'], maxDist: 2 },
+    blood_type: { x: 0.350, y: 0.727, labels: ['Blood Type'], maxDist: 2 },
+    eye_color: { x: 0.517, y: 0.727, labels: ['Eyes Color'], maxDist: 2 },
+    dl_codes: { x: 0.351, y: 0.823, labels: ['DL Codes'], maxDist: 1 },
+    conditions: { x: 0.512, y: 0.828, labels: ['Conditions'], maxDist: 2 },
+  },
+  // value boxes: offsets from the anchor (fractions of the card)
+  zones: {
+    full_name: { anchor: 'full_name', x0: -0.02, x1: 0.46, y0: 0.015, y1: 0.075, whitelist: L1 + ",.-' ", minConf: 55, vote: true },
+    nationality: { anchor: 'nationality', x0: -0.015, x1: 0.085, y0: 0.015, y1: 0.072, whitelist: L1, format: (s) => (/^[A-Z]{3}$/.test(s.trim()) ? { ok: true, value: s.trim() } : { ok: false, value: s }) },
+    sex: { anchor: 'sex', x0: -0.02, x1: 0.05, y0: 0.015, y1: 0.072 },
+    date_of_birth: { anchor: 'date_of_birth', x0: -0.015, x1: 0.17, y0: 0.015, y1: 0.072, strict: true },
+    weight: { anchor: 'weight', x0: 0, x1: 0.095, y0: 0.015, y1: 0.072, format: (s) => (/^\d{2,3}(\.\d)?$/.test(s.trim()) ? F.number(s, { decimals: true, min: 20, max: 250 }) : { ok: false, value: s }) },
+    height: { anchor: 'height', x0: 0.012, x1: 0.09, y0: 0.015, y1: 0.072, format: (s) => (/^[12]\.\d{1,2}$/.test(s.trim()) ? F.number(s, { decimals: true, min: 0.9, max: 2.5 }) : { ok: false, value: s }) },
+    address: { anchor: 'address', x0: -0.015, x1: 0.56, y0: 0.015, y1: 0.125, psm: '6', whitelist: L1 + "0123456789 .,-#/'", minConf: 55, vote: true },
+    license_no: { anchor: 'license_no', x0: -0.015, x1: 0.22, y0: 0.015, y1: 0.075, strict: true },
+    // licenses expire on the holder's birthday: a single clear reading whose month/day matches the
+    // birth date is accepted (VERIFY)
+    expiration_date: { anchor: 'expiration_date', x0: -0.02, x1: 0.17, y0: 0.015, y1: 0.075, strict: true,
+      confirm: (v, fl) => { const d = fl.find((x) => x.key === 'date_of_birth'); return !!(d && d.iso && v.iso && d.iso.slice(5) === v.iso.slice(5)); } },
+    agency_code: { anchor: 'agency_code', x0: 0, x1: 0.11, y0: 0.015, y1: 0.075, strict: true },
+    blood_type: { anchor: 'blood_type', x0: -0.01, x1: 0.10, y0: 0.015, y1: 0.072, strict: true },
+    eye_color: { anchor: 'eye_color', x0: -0.02, x1: 0.12, y0: 0.015, y1: 0.072, whitelist: L1 + ' ', format: (s) => { const v = s.trim().replace(/\s+/g, ' '); return EYES.test(v) ? { ok: true, value: v } : { ok: false, value: v }; } },
+    dl_codes: { anchor: 'dl_codes', x0: -0.045, x1: 0.15, y0: 0.015, y1: 0.072, strict: true, format: (s) => F.dlCodes(splitCodes(s)) },
+    conditions: { anchor: 'conditions', x0: -0.02, x1: 0.11, y0: 0.015, y1: 0.072 },
+  },
+};
+
 const fields = [
   // ---- main block (same order as the encoding sample) ----
   { key: 'license_no', label: 'License No.', labels: ['License No.', 'License Number', "Driver's License No.", 'Lic. No.'], refine: { whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-' }, format: F.licenseNo,
@@ -37,14 +94,20 @@ const fields = [
 
 // The LTO official's printed name / signature block (e.g. "ATTY. ... Assistant Secretary") must never
 // become part of a field value.
-const SIG_START = /^(ATTY\.?|ATTY|ATTORNEY|ASSISTANT|ASST\.?|SECRETARY|CHIEF|DIRECTOR|SIGNATURE|LTO)$/i;
+const SIG_START = /^(ATTY\.?|ATTY|ATTORNEY|ASSISTANT|ASST\.?|SECRETARY|CHIEF|DIRECTOR|SIGNATURE|LTO|EDGAR|GALVANTE|VIGOR|MENDOZA)$/i;
+// printed names of the LTO signatories (older cards: Atty. Vigor D. Mendoza II; newer: Edgar C. Galvante)
+const SIGNATORY = /\b(GALVANTE|EDGAR\s*C\.?\s*G|VIGOR\s*D?\.?\s*MENDOZA)/i;
 function ignoreWords(ocr) {
   const out = [];
+  const bottom = Math.max(1, ...ocr.words.map((w) => w.bbox.y1));
   for (const ln of ocr.lines) {
     const flat = ln.words.map((w) => w.text).join(' ');
     if (/assistant\s*secretary|signature\s*of|lto\s*chief|officer[- ]in[- ]charge/i.test(flat)) { out.push(...ln.words); continue; }
     const i = ln.words.findIndex((w) => /^ATTY\.?,?$/i.test(w.text.replace(/[^A-Za-z.,]/g, '')));
-    if (i >= 0) out.push(...ln.words.slice(i));
+    if (i >= 0) { out.push(...ln.words.slice(i)); continue; }
+    // the signatory's printed name (on its own line above "Assistant Secretary")
+    const m = flat.match(SIGNATORY);
+    if (m && Math.min(...ln.words.map((w) => w.bbox.y0)) > bottom * 0.6) { const k = ln.words.findIndex((w) => /EDGAR|GALVANTE|VIGOR|MENDOZA/i.test(w.text)); if (k >= 0) out.push(...ln.words.slice(Math.max(0, k - (/GALVANTE/i.test(ln.words[k].text) && k > 0 && /^C\.?$/i.test(ln.words[k - 1].text) ? 2 : 0)))); }
   }
   return out;
 }
@@ -57,14 +120,7 @@ function cutSignature(v) {
   return { ...v, words: ws, text: ws.map((w) => w.text).join(' ').trim(), conf: confs.reduce((a, b) => a + b, 0) / confs.length, minConf: Math.min(...confs) };
 }
 
-function postProcess(f, ocr) {
-  // the next row's label ("License No.") misread and glued to the end of a multi-line address
-  if (f.address && f.address.value) {
-    const cut = String(f.address.value).replace(/[\s,]+[A-Z0-9]{0,2}C[EF]N[S5]E\s*N[O0]\b.*$/i, '');
-    if (cut !== f.address.value && cut.length >= 8) {
-      Object.assign(f.address, { value: cut, status: STATUS.VERIFY, note: [f.address.note, 'A misread label was removed from the end of the address — check it.'].filter(Boolean).join(' ') });
-    }
-  }
+function splitName(f) {
   // Name split: printed as "LAST, FIRST MIDDLE"
   const name = f.full_name;
   const inherit = (key, value, extraNote = '', forceVerify = false) => {
@@ -88,6 +144,18 @@ function postProcess(f, ocr) {
     for (const k of ['last_name', 'first_name', 'middle_name']) inherit(k, '');
     if (name.value) { name.note = (name.note ? name.note + ' ' : '') + 'Expected "LAST, FIRST MIDDLE" — check.'; if (name.status === STATUS.OK) name.status = STATUS.VERIFY; }
   }
+
+}
+
+function postProcess(f, ocr) {
+  // the next row's label ("License No.") misread and glued to the end of a multi-line address
+  if (f.address && f.address.value) {
+    const cut = String(f.address.value).replace(/[\s,]+[A-Z0-9]{0,2}C[EF]N[S5]E\s*N[O0]\b.*$/i, '');
+    if (cut !== f.address.value && cut.length >= 8) {
+      Object.assign(f.address, { value: cut, status: STATUS.VERIFY, note: [f.address.note, 'A misread label was removed from the end of the address — check it.'].filter(Boolean).join(' ') });
+    }
+  }
+  splitName(f);
 
   // Classification from the card title (older cards print it; new cards may not)
   const flat = ocr.lines.map((l) => normToken(l.text));
@@ -157,7 +225,9 @@ export default {
     ], [{ re: LICNO_RE, w: 3, name: 'license-number pattern' }]);
   },
   fields,
+  cardTemplate,
   ignoreWords,
+  afterZones(f) { splitName(f); },
   stopLabels: ['Signature of Licensee', 'Assistant Secretary', 'LTO Chief', 'REPUBLIC OF THE PHILIPPINES', 'DEPARTMENT OF TRANSPORTATION', 'LAND TRANSPORTATION OFFICE',
     "DRIVER'S LICENSE", "NON-PROFESSIONAL DRIVER'S LICENSE", "PROFESSIONAL DRIVER'S LICENSE"],
   critical: {

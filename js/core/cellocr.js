@@ -17,6 +17,14 @@ function linesOf(data) {
   return (data.blocks || []).flatMap((b) => (b.paragraphs || []).flatMap((p) => p.lines || []));
 }
 
+// mostly junk: many words, few of them real (letters/digits with decent confidence)
+function isNoisy(data) {
+  const ws = wordsOf(data).filter((w) => w.text && w.text.trim());
+  if (ws.length < 60) return false;
+  const real = ws.filter((w) => /[A-Za-z0-9]{2,}/.test(w.text) && w.confidence >= 60).length;
+  return real / ws.length < 0.35;
+}
+
 /**
  * @param img        gray, straightened table image (the image the page OCR ran on)
  * @param pageOcr    normalized full-page OCR of the same image (normalizeOcr shape)
@@ -71,6 +79,7 @@ export async function readCells(img, pageOcr, recognize, { onProgress = () => {}
     // the box is binarised (drops stamp ink / faint marks) and read twice with different Tesseract
     // page-segmentation modes (sparse text, uniform block): two independent readings to compare
     const bins = {};
+    let noisy = false;
     for (let k = 0; k < passes.length; k++) {
       const { level, psm } = passes[k];
       const s = globalThis.GRX_CELL_SCALE || 2, pad = 16;
@@ -87,7 +96,12 @@ export async function readCells(img, pageOcr, recognize, { onProgress = () => {}
         for (let y = 0; y < big.height; y++) padded.data.set(big.data.subarray(y * big.width * 4, (y + 1) * big.width * 4), ((y + pad) * padded.width + pad) * 4);
         bins[level] = padded;
       }
+      // speed: a box full of security-pattern specks (REMARKS, a stamp) gives dozens of junk "words"
+      // and takes Tesseract seconds per pass — read it once only (its fields then have one reading,
+      // which never makes them more certain)
+      if (k > 0 && noisy) break;
       const data = await recognize(bins[level], { psm });
+      if (k === 0 && !globalThis.GRX_NO_SKIP) noisy = isNoisy(data, bins[level]);
       const map = (bb) => ({ x0: r.x + (bb.x0 - pad) / s, y0: r.y + (bb.y0 - pad) / s, x1: r.x + (bb.x1 - pad) / s, y1: r.y + (bb.y1 - pad) / s });
       let lns = linesOf(data).map((ln) => ln.words || []);
       if (!lns.length) lns = [wordsOf(data)];
@@ -115,6 +129,7 @@ export async function readCells(img, pageOcr, recognize, { onProgress = () => {}
       const padded = { width: big.width + 2 * pad, height: big.height + 2 * pad, data: new Uint8ClampedArray((big.width + 2 * pad) * (big.height + 2 * pad) * 4).fill(255) };
       for (let y = 0; y < big.height; y++) padded.data.set(big.data.subarray(y * big.width * 4, (y + 1) * big.width * 4), ((y + pad) * padded.width + pad) * 4);
       onProgress({ stage: 'ocr', text: 'Reading the unruled part of the table…' });
+      // (free bands are always read twice: the CR No. line below the table is read from them)
       const data = await recognize(padded, { psm: passes[k].psm });
       const map = (bb) => ({ x0: r.x + (bb.x0 - pad) / s, y0: r.y + (bb.y0 - pad) / s, x1: r.x + (bb.x1 - pad) / s, y1: r.y + (bb.y1 - pad) / s });
       let lns = linesOf(data).map((ln) => ln.words || []);

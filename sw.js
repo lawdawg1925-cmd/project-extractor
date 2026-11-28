@@ -1,10 +1,10 @@
 // Service worker: caches ONLY the app's own files (code + OCR engine) so the tool opens offline.
 // It never caches photos or extracted data (those never touch the network at all).
-const CACHE = 'grx-scan-v7';
+const CACHE = 'grx-scan-v8';
 const FILES = [
   './', './index.html', './css/style.css', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/ncpo-logo.png',
   './js/app.js', './js/file-warning.js', './js/core/ocr-browser.js', './js/core/pipeline.js', './js/core/image.js', './js/core/layout.js', './js/core/text.js',
-  './js/core/formats.js', './js/core/quad.js', './js/core/refine.js', './js/core/status.js', './js/core/validate.js', './js/core/output.js', './js/core/table.js', './js/core/cellocr.js',
+  './js/core/formats.js', './js/core/quad.js', './js/core/refine.js', './js/core/status.js', './js/core/validate.js', './js/core/output.js', './js/core/table.js', './js/core/cellocr.js', './js/core/zones.js', './js/core/imageload.js',
   './js/extractors/registry.js', './js/extractors/base.js', './js/extractors/license.js', './js/extractors/cr.js',
   './vendor/tesseract/tesseract.min.js', './vendor/tesseract/worker.min.js',
   './vendor/core/tesseract-core-simd-lstm.wasm.js', './vendor/core/tesseract-core-lstm.wasm.js',
@@ -15,7 +15,21 @@ self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) =
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;
-  // network first (so updates show up), cache as offline fallback
-  e.respondWith(fetch(e.request).then((r) => { const copy = r.clone(); if (r.ok) caches.open(CACHE).then((c) => c.put(e.request, copy)); return r; })
-    .catch(() => caches.match(e.request, { ignoreSearch: true })));
+  // the OCR engine and icons never change within a version: from the cache (fast, no data used,
+  // works on a weak signal); fetched and stored only if missing
+  if (/\/(vendor|icons)\//.test(url.pathname)) {
+    e.respondWith(caches.match(e.request, { ignoreSearch: true }).then((hit) => hit || fetch(e.request).then((r) => { const copy = r.clone(); if (r.ok) caches.open(CACHE).then((c) => c.put(e.request, copy)); return r; })));
+    return;
+  }
+  // app pages and code: network first (so updates show up), but a slow or stalled connection falls
+  // back to the stored copy after a few seconds instead of leaving the page loading
+  e.respondWith(new Promise((resolve) => {
+    let done = false;
+    const fallback = () => caches.match(e.request, { ignoreSearch: true }).then((hit) => hit || null);
+    const timer = setTimeout(() => fallback().then((hit) => { if (hit && !done) { done = true; resolve(hit); } }), 4000);
+    fetch(e.request).then((r) => {
+      const copy = r.clone(); if (r.ok) caches.open(CACHE).then((c) => c.put(e.request, copy));
+      if (!done) { done = true; clearTimeout(timer); resolve(r); }
+    }).catch(() => fallback().then((hit) => { if (!done) { done = true; clearTimeout(timer); resolve(hit || Response.error()); } }));
+  }));
 });

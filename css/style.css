@@ -99,3 +99,9 @@ body.dragging main{outline:4px dashed var(--blue);outline-offset:-8px}
 
 .quality-hint{background:#fff6db;border:1px solid #e8c766;color:#6b4e00;border-radius:10px;padding:8px 10px;font-size:14px;margin:10px 0 0}
 .quality-hint.hidden{display:none}
+
+/* scan / photo errors: stay on screen with a retry and short technical details for reporting */
+.scan-error { margin-top: 12px; padding: 12px 14px; border: 2px solid #c62828; border-radius: 10px; background: #fdecea; color: #7f1d1d; }
+.scan-error-text { margin: 0 0 6px; font-weight: 700; }
+.scan-error .hint { margin: 0 0 8px; color: #5b1a1a; }
+.scan-error-diag { margin: 8px 0 0; font-size: 12px; color: #6b4a4a; word-break: break-word; }

@@ -8,6 +8,7 @@ import { readCells } from './cellocr.js';
 import { mergeReads } from '../extractors/base.js';
 import { buildMessages } from './validate.js';
 import { refineFields, refineCrNo } from './refine.js';
+import { readCardZones } from './zones.js';
 import * as registry from '../extractors/registry.js';
 
 /**
@@ -40,6 +41,7 @@ export async function extractDocument(image, { recognize, docType = 'auto', onPr
   };
   const run = async (rot, mode, label) => {
     onProgress({ stage: 'ocr', text: label });
+    await new Promise((r) => setTimeout(r, 0)); // let the screen update between heavy steps (slow phones)
     // 'restored': a dim / blurry / low-resolution photo (cheap phone camera) is cleaned first —
     // upscaled, denoised, lighting evened out and sharpened — then read like a normal photo
     let src = rot ? rotate90(image, rot) : image;
@@ -65,7 +67,11 @@ export async function extractDocument(image, { recognize, docType = 'auto', onPr
     const a = await run(0, 'restored', 'Cleaning up a dim or blurry photo…');
     if (a.quality > best.quality) best = a;
   }
-  if (!good(best)) {
+  // speed: horizontal words that already name the document clearly (its printed labels were read)
+  // are not upside down — no rotation needs to be tried (upside-down text never matches the labels)
+  const score = (a) => (docType === 'auto' ? a.det[0].score : (a.det.find((d) => d.id === docType) || { score: 0 }).score);
+  const upright = best.upright >= 0.8 && best.ocr.words.length >= 20 && score(best) >= 0.45 && !globalThis.GRX_ALWAYS_ROTATE;
+  if (!good(best) && !upright) {
     // words already lie horizontally (upright or upside down): only the 180° turn is worth a try
     const rots = best.upright >= 0.8 && best.ocr.words.length >= 20 ? [2] : [1, 3, 2];
     for (const rot of rots) {
@@ -158,6 +164,18 @@ export async function extractDocument(image, { recognize, docType = 'auto', onPr
   }
   onProgress({ stage: 'refine', text: 'Double-checking uncertain numbers…' });
   const refined = await refineFields(fields, ex.fields, best.img, recognize, { cells: cellList });
+  // printed ID card with a fixed layout: values the page reading missed are read from their place on
+  // the card, located from the labels that were read (always VERIFY)
+  if (ex.cardTemplate && !globalThis.GRX_NO_ZONES) {
+    try {
+      const nameBefore = (fields.find((f) => f.key === 'full_name') || {}).value;
+      const ocrs = [best, ...attempts.filter((a) => a !== best && a.rot === best.rot && a.img.width === best.img.width && a.img.height === best.img.height)].map((a) => a.ocr);
+      const n = await readCardZones(fields, ex.fields, ex.cardTemplate, best.img, ocrs, recognize, { onProgress });
+      if (n && ex.afterZones && (fields.find((f) => f.key === 'full_name') || {}).value !== nameBefore) {
+        const byKey = Object.fromEntries(fields.map((f) => [f.key, f])); ex.afterZones(byKey); fields = fields.map((f) => byKey[f.key] || f);
+      }
+    } catch (e) { console.warn('card layout re-read failed', e); }
+  }
   if (ex.useGrid) { try { await refineCrNo(fields, ex.fields, best.img, { words: [...ocrIn.words, ...(ocrIn === best.ocr ? [] : best.ocr.words)] }, recognize); } catch (e) { console.warn('CR No. re-read failed', e); } }
   // the header (Field Office / Office Code / date) and the CR No. line sit just outside the ruled table:
   // read a thin strip above it (and one just below it when no receipt is attached) for those only

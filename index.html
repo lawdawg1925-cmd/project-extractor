@@ -64,6 +64,12 @@
     <h2 class="mt"><span class="num">3</span> Extract</h2>
     <button class="btn primary xl wide" id="btnExtract" type="button" disabled>🔍 EXTRACT DATA</button>
     <div id="progress" class="progress hidden"><div class="bar"><div id="progBar"></div></div><p id="progText">Starting…</p></div>
+    <div id="scanError" class="scan-error hidden" role="alert">
+      <p class="scan-error-text" id="scanErrorText"></p>
+      <p class="hint" id="scanErrorTip" hidden></p>
+      <button class="btn" id="btnRetry" type="button">↻ Try again</button>
+      <p class="scan-error-diag" id="scanErrorDiag"></p>
+    </div>
   </section>
 
   <!-- STEP 4 -->

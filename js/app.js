@@ -5,48 +5,63 @@ import { isFullImage } from './core/quad.js';
 import { detectOutline } from './core/table.js';
 import { toText, toCSV, toJSON, fieldText } from './core/output.js';
 import { STATUS } from './core/status.js';
-import { getRecognizer, shutdown } from './core/ocr-browser.js';
+import { getRecognizer, shutdown, engineInfo, explainEngineError, simdSupported } from './core/ocr-browser.js';
+import { loadPhoto } from './core/imageload.js';
+import { resize as resizeImg } from './core/image.js';
 
 const $ = (id) => document.getElementById(id);
-const MAX_SIDE = 3000; // limit very large phone photos (memory on phones)
+// limit very large phone photos (memory on phones); the photo is decoded straight to this size
+// (core/imageload.js). After an out-of-memory failure the retry reads a 2400 px copy.
+const MAX_SIDE = 3000, RETRY_SIDE = 2400;
 
-const state = { original: null, working: null, rotation: 0, cropRect: null, result: null, busy: false, corners: null, quadAuto: false };
+const state = { original: null, working: null, rotation: 0, cropRect: null, result: null, busy: false, corners: null, quadAuto: false, photoInfo: null, lowMem: false };
 
 // ---------- STEP 1: load image ----------
 async function loadFile(file) {
   if (!file) return;
-  if (!/^image\//.test(file.type) && !/\.(jpe?g|png|webp|heic|bmp|gif)$/i.test(file.name)) { toast('Please choose an image file (JPG or PNG).'); return; }
+  sessionStorage.removeItem('grxCamera');
+  hideScanError();
+  // some Android pickers give no file type and no extension: try to open those anyway
+  if (file.type && !/^image\//.test(file.type) && !/\.(jpe?g|png|webp|heic|heif|bmp|gif)$/i.test(file.name || '')) { toast('Please choose an image file (JPG or PNG).'); return; }
   clearResults();
-  let bmp;
+  let loaded;
   try {
-    // createImageBitmap applies the phone's EXIF orientation automatically
-    bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    loaded = await loadPhoto(file, MAX_SIDE);
   } catch (e) {
-    bmp = await new Promise((res, rej) => {
-      const url = URL.createObjectURL(file);
-      const im = new Image();
-      im.onload = () => { URL.revokeObjectURL(url); res(im); };
-      im.onerror = () => { URL.revokeObjectURL(url); rej(new Error('decode')); };
-      im.src = url;
-    }).catch(() => null);
+    console.error(e);
+    showScanError(e.message || String(e), { retry: false, tip: 'Tip: take the photo with the phone\'s Camera app, then tap 🖼 Choose Image.' });
+    return;
   }
-  if (!bmp) { toast('This image could not be opened. On iPhone, set Camera → Formats → "Most Compatible", or send a JPG.'); return; }
-  const w0 = bmp.width, h0 = bmp.height;
-  const f = Math.min(1, MAX_SIDE / Math.max(w0, h0));
-  const c = document.createElement('canvas');
-  c.width = Math.round(w0 * f); c.height = Math.round(h0 * f);
-  const g = c.getContext('2d', { willReadFrequently: true });
-  g.drawImage(bmp, 0, 0, c.width, c.height);
-  if (bmp.close) bmp.close();
-  state.original = g.getImageData(0, 0, c.width, c.height);
-  c.width = c.height = 0;
-  state.rotation = 0; state.cropRect = null;
+  state.original = loaded.image;
+  state.photoInfo = { ...loaded.info, size: file.size };
+  state.rotation = 0; state.cropRect = null; state.lowMem = false;
   rebuildWorking();
   $('previewWrap').classList.remove('hidden');
   $('btnExtract').disabled = false;
   $('btnCropReset').classList.add('hidden');
   $('step2').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+
+// ---------- errors: shown on screen (not only in a short toast) so a problem can be reported ----------
+function diagnostics() {
+  const ua = navigator.userAgent || '';
+  const br = (ua.match(/(HuaweiBrowser|HarmonyOS|SamsungBrowser|EdgA|Firefox|OPR|Chrome|Version)\/[\d.]+/g) || []).slice(0, 2).join(' ');
+  const pi = state.photoInfo;
+  return [br || 'browser ?', navigator.deviceMemory ? `memory ${navigator.deviceMemory} GB` : '', `SIMD ${engineInfo.simd == null ? (simdSupported() ? 'yes' : 'no') : engineInfo.simd ? 'yes' : 'no'}`,
+    engineInfo.core ? `engine ${engineInfo.core}` : '', pi && pi.w ? `photo ${pi.w}×${pi.h}${pi.orientation > 1 ? ' o' + pi.orientation : ''}` : '',
+    state.original ? `used ${state.original.width}×${state.original.height}` : '', pi && pi.path ? pi.path : ''].filter(Boolean).join(' · ');
+}
+function showScanError(text, { retry = true, tip = '' } = {}) {
+  const box = $('scanError'); if (!box) { toast(text, 8000); return; }
+  $('scanErrorText').textContent = text;
+  $('scanErrorTip').textContent = tip;
+  $('scanErrorTip').hidden = !tip;
+  $('scanErrorDiag').textContent = 'Details: ' + diagnostics();
+  $('btnRetry').hidden = !retry;
+  box.classList.remove('hidden');
+  box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+function hideScanError() { const box = $('scanError'); if (box) box.classList.add('hidden'); }
 
 function rebuildWorking() {
   let img = state.original;
@@ -189,6 +204,21 @@ $('btnCropApply').onclick = () => {
 $('btnCropReset').onclick = () => { state.cropRect = null; $('btnCropReset').classList.add('hidden'); rebuildWorking(); };
 
 $('inCamera').onchange = (e) => { loadFile(e.target.files[0]); e.target.value = ''; };
+// Opening the camera puts this page in the background; on phones with little memory the browser may
+// close it meanwhile (the page reloads and the photo is lost). Free the OCR engine's memory first and
+// remember that the camera was opened, so a reload can explain what happened.
+$('inCamera').addEventListener('click', () => {
+  try { sessionStorage.setItem('grxCamera', String(Date.now())); } catch (e) { /* private mode */ }
+  if (!state.busy) shutdown();
+});
+{
+  let t = 0; try { t = +sessionStorage.getItem('grxCamera') || 0; sessionStorage.removeItem('grxCamera'); } catch (e) { /* ignore */ }
+  if (t && Date.now() - t < 15 * 60 * 1000) {
+    setTimeout(() => showScanError('The phone closed this page while the camera was open (not enough free memory), so the photo did not arrive.', { retry: false,
+      tip: 'Take the photo with the phone\'s Camera app first, then tap 🖼 Choose Image and pick it. Closing other apps also helps.' }), 300);
+  }
+}
+$('btnRetry') && ($('btnRetry').onclick = () => { hideScanError(); if (state.working && !state.busy) $('btnExtract').click(); });
 $('inFile').onchange = (e) => { loadFile(e.target.files[0]); e.target.value = ''; };
 // drag & drop (laptop)
 ['dragenter', 'dragover'].forEach((t) => document.addEventListener(t, (e) => { e.preventDefault(); document.body.classList.add('dragging'); }));
@@ -205,14 +235,23 @@ $('btnExtract').onclick = async () => {
   const prog = $('progress');
   prog.classList.remove('hidden');
   setProgress(0.02, 'Loading the text-recognition engine (first time takes a few seconds)…');
+  hideScanError();
   const docType = document.querySelector('input[name=doctype]:checked').value;
   try {
+    await new Promise((r) => setTimeout(r, 30)); // let the progress bar appear first
     let stageText = 'Reading text…';
     const recognize = await getRecognizer((p) => setProgress(p, stageText));
     // corners: the outline shown on the preview (auto-detected or dragged); null = read the whole image
     const corners = $('chkStraighten').checked && state.corners ? state.corners.map((p) => ({ ...p })) : null;
-    const result = await extractDocument(state.working, {
-      recognize, docType, corners, outlineMethod: state.outlineMethod || null,
+    // retry after a memory failure: read a smaller copy (corners scaled with it)
+    let work = state.working, cs = corners;
+    if (state.lowMem && Math.max(work.width, work.height) > RETRY_SIDE) {
+      const f = RETRY_SIDE / Math.max(work.width, work.height);
+      work = resizeImg(work, Math.round(work.width * f), Math.round(work.height * f));
+      if (cs) cs = cs.map((p) => ({ x: p.x * f, y: p.y * f }));
+    }
+    const result = await extractDocument(work, {
+      recognize, docType, corners: cs, outlineMethod: state.outlineMethod || null,
       onProgress: ({ text }) => { stageText = text; setProgress(0.05, text); },
     });
     showStraightened(result.straightened ? result.processedImage : null);
@@ -222,7 +261,13 @@ $('btnExtract').onclick = async () => {
     $('step4').scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (err) {
     console.error(err);
-    toast('Extraction failed: ' + (err && err.message ? err.message : err) + '. If you opened the file directly, use the start launcher (see README).', 8000);
+    const why = explainEngineError(err);
+    const mem = /memory/i.test(why);
+    if (mem) state.lowMem = true; // the retry works on a smaller copy of the photo
+    await shutdown(); // a fresh engine for the next try
+    showScanError(`Scan failed: ${why}.`, { retry: true, tip: mem
+      ? 'Close other apps and browser tabs, then tap “Try again” (the photo is read at a smaller size). If it keeps failing, set the camera to a lower resolution (8–12 MP).'
+      : (location.protocol === 'file:' ? 'You opened the file directly: use the start launcher (see README).' : 'Tap “Try again”. If it keeps failing, reload the page, or open the app in Google Chrome.') });
   } finally {
     state.busy = false;
     $('btnExtract').disabled = !state.working;
@@ -368,6 +413,10 @@ function toast(msg, ms = 2600) { const t = $('toast'); t.textContent = msg; t.cl
 if ('serviceWorker' in navigator && window.isSecureContext && location.protocol !== 'file:') {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
+
+// an error the scan code did not catch (e.g. inside the OCR engine) must not leave a frozen screen
+window.addEventListener('unhandledrejection', (e) => { if (state.busy) console.warn('unhandled', e.reason); });
+window.addEventListener('error', (e) => { if (state.busy) console.warn('error', e.message); });
 
 // expose for automated smoke tests only
 window.__PE = { state };

@@ -11,6 +11,19 @@ puts the information into the right fields → you check/correct → **Copy All*
 > 🔒 **Everything happens on your own device.** The photo is never uploaded, nothing is saved,
 > and it works **without internet**. Press **Clear / Delete** when done.
 
+### New: license fields by card position, Huawei / low-memory phone fixes, faster CR (cache grx-scan-v8)
+- **License fields read by their place on the card.** On the busy card background (pattern, hologram, LTO seal) small
+  labels are often lost. The labels that *were* read now locate the whole card layout, and each missing or doubtful value
+  (Expiration Date, Agency Code, Eyes Color, DL Codes, Height, Address, Name…) is re-read from its printed position.
+  Such values are always **[VERIFY]**, must pass the field's format check, and need agreeing readings.
+- **Signatory ignored on newer cards too:** "EDGAR C. GALVANTE / Assistant Secretary" (like "ATTY. VIGOR D. MENDOZA II") is never copied.
+- **Huawei / low-memory phones:** big camera photos (12–50 MP) are opened straight at a safe size (no crash or blank
+  picture), the reading engine falls back to its plain build if the faster one fails, and every step has a time limit.
+  A problem now shows a red **"Scan failed: …"** box with **↻ Try again** and a *Details* line (browser, memory, photo size) to report.
+  If the phone closes the page while the camera is open, the app says so on return (use the Camera app, then **🖼 Choose Image**).
+- **Faster CR reading** on weak phones (no needless rotation tries; noisy security-pattern boxes are read once).
+- The app opens faster on a weak signal (engine files come from the phone's offline copy).
+
 ### New: better reading of photos from low-end phone cameras (cache grx-scan-v7)
 - **Dim, soft or low-resolution photos** are cleaned up on the phone before reading (enlarged, noise removed, lighting
   evened out, letters sharpened). Sharp photos are read exactly as before.
@@ -115,6 +128,9 @@ The same files can be put on any HTTPS static host (for example a unit-controlle
 - If you see "blurry/low-contrast" or many orange fields → retake rather than typing everything.
 - **Low-end phones:** go near a window or turn on the room light (flash only if there is no glare), fill the frame with the
   document, tap to focus and hold still for a second. A closer, sharper photo helps far more than a higher megapixel setting.
+- **Huawei / phones with little memory:** close other apps first; if the page reloads after taking a photo, take it with the
+  phone's **Camera** app and then use **🖼 Choose Image**. A camera setting of 8–13 MP is plenty (50 MP modes only slow things down).
+  If a scan fails, tap **↻ Try again**; if it keeps failing, note the *Details* line and try Google Chrome.
 
 ## E. For developers / IT
 
@@ -127,6 +143,8 @@ python3 samples/generate_samples.py && python3 samples/generate_samples_hard.py 
 node tests/live-check.mjs https://lawdawg1925-cmd.github.io/project-extractor/ samples/license_perspective_glare_clutter.jpg   # check the live site
 node tests/debug-ocr.mjs samples/cr_clean.png   # see OCR words + positions
 node tests/lowend-tests.mjs      # photo check / restoration / broken-rule boxes / CR box-layout fallback (synthetic)
+node tests/card-tests.mjs        # license card-layout re-read, signatory, photo header / EXIF, engine error messages (synthetic)
+node tests/huawei-test.mjs       # Huawei-like mobile: 12/48 MP + EXIF photos, no-SIMD engine, failures → "Scan failed" + retry
 python3 tests/degrade.py /tmp/deg samples/*.png samples/*.jpg     # simulate low-end cameras (lowA..lowD)
 node tests/bench.mjs samples/expected.json samples /tmp/deg /tmp/out.json && python3 tests/bench-report.py /tmp/out.json --fields
 ```

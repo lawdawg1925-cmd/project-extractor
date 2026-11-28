@@ -61,7 +61,7 @@ function region(geo, img, opts = {}) {
  * @param img     the preprocessed grayscale image the OCR ran on
  * @param recognize async (img, {psm, whitelist}) => tesseract data
  */
-async function readRegion(img, r, def, recognize) {
+export async function readRegion(img, r, def, recognize, { psm = "7", grayFlat = false } = {}) {
   r = { x: Math.max(0, r.x), y: Math.max(0, r.y), w: r.w, h: r.h };
   r.w = Math.min(r.w, img.width - r.x); r.h = Math.min(r.h, img.height - r.y);
   if (r.w < 8 || r.h < 8) return [];
@@ -70,9 +70,11 @@ async function readRegion(img, r, def, recognize) {
   if (scale > 1.05) c = resize(c, c.width * scale, c.height * scale);
   const base = normalizeContrast(c);
   const variants = { contrast: base, flat: otsu(flatten(base)), sauvola: adaptiveThreshold(base, Math.max(15, (c.height | 1)), 0.2) };
+  // background pattern evened out but gray levels kept (thin printed strokes survive)
+  if (grayFlat) variants.flatGray = flatten(base);
   const reads = [];
   for (const [name, v] of Object.entries(variants)) {
-    const data = await recognize(v, { psm: '7', whitelist: def.refine.whitelist });
+    const data = await recognize(v, { psm, whitelist: def.refine.whitelist });
     const text = (data.text || '').replace(/\s+/g, ' ').trim();
     if (!text) continue;
     const fmt = def.format(text);
